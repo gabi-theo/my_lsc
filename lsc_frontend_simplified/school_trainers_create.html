@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Info Traineri</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+
+<div class="container mt-5">
+    <h1>Info Traineri</h1>
+    <form id="step2Form">
+        <div class="form-group">
+            <label for="trainerFirstName">Nume:</label>
+            <input type="text" class="form-control" id="trainerFirstName" required>
+        </div>
+        <div class="form-group">
+            <label for="trainerLastName">Prenume:</label>
+            <input type="text" class="form-control" id="trainerLastName" required>
+        </div>
+        <div class="form-group">
+            <label for="trainerPhone">Telefon:</label>
+            <input type="tel" class="form-control" id="trainerPhone" required>
+        </div>
+        <div class="form-group">
+            <label for="trainerEmail">Email:</label>
+            <input type="email" class="form-control" id="trainerEmail" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Creaza si adauga alt trainer</button>
+        <button type="button" class="btn btn-success" id="goToStep3">Seteaza vacantele scolii</button>
+    </form>
+
+    <h2 class="mt-5">Traineri</h2>
+    <table class="table table-bordered" id="trainersTable">
+        <thead>
+            <tr>
+                <th>Nume</th>
+                <th>Prenume</th>
+                <th>Telefon</th>
+                <th>Email</th>
+                <th>Salariu</th>
+                <th>Grupe</th>
+            </tr>
+        </thead>
+        <tbody id="trainersTableBody">
+            <!-- Trainers table will be populated here -->
+        </tbody>
+    </table>
+</div>
+
+<script>
+    document.getElementById('step2Form').addEventListener('submit', function (event) {
+        console.log("adding")
+        // event.preventDefault();
+
+        // Fetch API endpoint for Step 2
+        fetch('http://127.0.0.1:8000/api/trainer_create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                first_name: document.getElementById('trainerFirstName').value,
+                last_name: document.getElementById('trainerLastName').value,
+                phone_contact: document.getElementById('trainerPhone').value,
+                email_contact: document.getElementById('trainerEmail').value,
+            }),
+            credentials:"include",
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Handle the response if needed
+            console.log(data);
+
+            // Refresh the trainers table
+            fetchTrainers();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    });
+
+    document.getElementById('goToStep3').addEventListener('click', function () {
+        // Redirect to Step 3 or handle the transition to the next step
+        window.location.href = 'http://127.0.0.1:5500/lsc_frontend_simplified/school_calendar.html';
+    });
+
+    function fetchTrainers() {
+        // Fetch API endpoint for getting trainers from the school
+        fetch('http://127.0.0.1:8000/api/trainers_from_school/', { method: "GET", credentials: "include" })
+        .then(response => response.json())
+        .then(data => {
+            const trainersTableBody = document.getElementById('trainersTableBody');
+            trainersTableBody.innerHTML = ''; // Clear existing table data
+
+            data.forEach(trainer => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${trainer.first_name}</td>
+                    <td>${trainer.last_name}</td>
+                    <td>${trainer.phone_contact}</td>
+                    <td>${trainer.email_contact}</td>
+                    <td><button type="button" class="btn btn-success">Detalii Salariu</button></td>
+                    <td><button type="button" class="btn btn-success">Detalii Grupe</button></td>
+                `;
+                trainersTableBody.appendChild(row);
+            });
+        })
+        .catch(error => {
+            console.error('Error fetching trainers:', error);
+        });
+    }
+
+    // Initial fetch of trainers when the page loads
+    fetchTrainers();
+</script>
+
+</body>
+</html>

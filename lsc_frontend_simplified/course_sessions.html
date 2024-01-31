@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Course Sessions</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <style>
+        .present{
+        color:green;
+        }
+        .absent{
+        color:red;
+        }
+    </style>
+    <h3>Lectie</h3>
+    <div id="button-container" class="d-flex flex-row"></div>
+    <br>
+    <div id="student-table-container">
+        <h3>Studenti Curs</h3>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Prezenta</th>
+                </tr>
+            </thead>
+            <tbody id="student-table-body">
+            </tbody>
+        </table>
+    </div>
+    <br>
+    <div id="absent-student-table-container">
+        <h3>Studenti Recuperare</h3>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Absent la cursul</th>
+                    <th>Scoala student</th>
+                    <th>Prezenta</th>
+                </tr>
+            </thead>
+            <tbody id="absent-student-table-body">
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const urlSearchParams = new URLSearchParams(window.location.search);
+        const session_id = urlSearchParams.get("session_id");
+        // Function to fetch the session_no variable from the API
+        fetch('http://127.0.0.1:8000/api/course_sessions/'+session_id + "/", {
+                method: 'GET',
+                credentials: "include",
+            })
+            .then(response => {return response.json()})
+            .then(data => {
+                console.log(data)
+                const session_no = data.session_no;
+                const group_schedule_id = data.course_session_id;
+                generateButtons(session_no);
+                fetchStudents(data.course_session_id);
+                fetchAbsentStudents(data.id);
+            })
+            .catch(error => console.error('API request error:', error));
+
+        
+
+        // Function to generate buttons based on the session_no variable
+        function generateButtons(session_no) {
+            const buttonContainer = document.getElementById('button-container');
+            const sessionNumbers = session_no;
+
+            for (let number = 1; number<=sessionNumbers; number++) {
+                const button = document.createElement('button');
+                button.textContent = number;
+                button.className = 'btn btn-primary m-2'; // Add Bootstrap classes
+                buttonContainer.appendChild(button);
+            }
+        }
+
+        function fetchStudents(course_schedule_id) {
+            fetch('http://127.0.0.1:8000/api/course_schedule_details/?id='+course_schedule_id, {
+                method: 'GET',
+                credentials: 'include',
+            })
+                .then(response => {return response.json()})
+                .then(data => {
+                    const studentTableBody = document.getElementById('student-table-body');
+                    // Loop through the student data and populate the table
+                    data.forEach(student => {
+                        const students = student.students
+                        students.forEach(student => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${student.first_name} ${student.last_name}</td>
+                                <td>
+                                    <button type="button" class="btn btn-warning" onclick="markStudentAbsentForSession('${student.id}', '${session_id}')">
+                                        Absent
+                                    </button>
+                                </td>
+                            `;
+                            studentTableBody.appendChild(row);
+                        })
+                    });
+                })
+                .catch(error => console.error('API request error:', error));
+        }
+        function fetchAbsentStudents(session_id){
+            fetch('http://127.0.0.1:8000/api/student_session_absent/'+session_id+"/", {
+                method: 'GET',
+                credentials: "include",
+            })
+            .then(response => {return response.json()})
+            .then(data => {
+                    const studentTableBody = document.getElementById('absent-student-table-body');
+                    // Loop through the student data and populate the table
+                    data.forEach(item => {
+                        console.log(item)
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${item.absent_participant_first_name} ${item.absent_participant_last_name}</td>
+                            <td>${item.absent_on_session}</td>
+                            <td>${item.student_school}</td>
+                            <button type="button" class="btn btn-danger" onclick="markStudentAbsentForMakeUp('${item.id}', 'absent')">
+                                Absent
+                            </button>
+                            <button type="button" class="btn btn-success" onclick="markStudentAbsentForMakeUp('${item.id}', 'present')">
+                                Prezent
+                            </button>
+                        `;
+                        if(item.is_absent_for_absence){
+                            row.style.backgroundColor = "#E57373"
+                        }
+                        else if(item.is_absence_completed) {
+                            row.style.backgroundColor = "#4CAF50"
+                        }
+                        studentTableBody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('API request error:', error));
+        }
+        function markStudentAbsentForSession(student_id, session_id){
+            fetch('http://127.0.0.1:8000/api/student_absent/'+student_id+"/"+session_id+"/", {
+                method: 'POST',
+                credentials: "include",
+            })
+        }
+
+        function markStudentAbsentForMakeUp(absence_id, presence_type){
+            fetch('http://127.0.0.1:8000/api/make_up_presence/'+absence_id+"/"+presence_type+"/", {
+                method: 'POST',
+                credentials: "include",
+            })
+        }
+    </script>
+</body>
+</html>

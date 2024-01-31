@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studenti Upload</title>
+    <!-- Bootstrap CSS link -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Upload Fisier Studenti</h1>
+        <div id="loading-spinner" class="spinner-border text-primary" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+        <form id="excelUploadForm">
+            <div class="form-group">
+                <label for="excelFile">Alege fisier excel:</label>
+                <input type="file" id="excelFile" name="file" class="form-control-file" accept=".xls, .xlsx" required>
+            </div>
+
+            <button type="button" onclick="uploadExcel()" id="uploadButton" class="btn btn-primary">Upload Excel</button>
+            <button type="button" onclick="goToRoomSetup()" id="uploadButton" class="btn btn-primary">Seteaza Sali Clasa</button>
+
+        </form>
+    </div>
+    <div id="result-display" class="mt-3"></div>
+    <!-- Bootstrap JS and Popper.js scripts (required for Bootstrap functionality) -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        function showLoadingSpinner() {
+            const uploadButton = document.getElementById('uploadButton');
+            uploadButton.disabled = true;
+            document.getElementById('loading-spinner').style.display = 'block';
+        }
+
+        function hideLoadingSpinner() {
+            const uploadButton = document.getElementById('uploadButton');
+            uploadButton.disabled = false;
+            document.getElementById('loading-spinner').style.display = 'none';
+        }
+
+        function displayResult(result) {
+            const resultDisplay = document.getElementById('result-display');
+            resultDisplay.innerHTML = `<p class="alert alert-info">${result}</p>`;
+        }
+
+        function goToRoomSetup(){
+            window.location.href = 'http://127.0.0.1:5500/lsc_frontend_simplified/school_setup_rooms.html';
+        }
+
+        function uploadExcel() {
+            const form = document.getElementById('excelUploadForm');
+            const formData = new FormData(form);
+            showLoadingSpinner();
+            fetch('http://127.0.0.1:8000/api/students_excel_upload/', {
+                method: 'POST',
+                body: formData,
+                credentials: 'include',
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoadingSpinner();
+                console.log('Response:', data);
+                if ('message' in data) {
+                    // Handle the specific structure of your response
+                    displayResult(data.message);
+                } else {
+                    // Handle other response structures or errors
+                    displayResult('Unexpected response. Please try again.');
+                }
+            })
+            .catch(error => {
+                hideLoadingSpinner();
+                alert('Error uploading Excel:', error);
+                displayResult('Error loading data. Please try again.');
+            });
+        }
+        hideLoadingSpinner();
+    </script>
+</body>
+</html>

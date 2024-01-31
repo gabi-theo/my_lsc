@@ -1,0 +1,66 @@
+# docker-compose.yml
+
+version: '3'
+
+services:
+  db:
+    image: postgres:latest
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: myapp
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:latest
+
+  web:
+    build: .
+    command: bash -c "python manage.py makemigrations && python manage.py migrate && python manage.py shell < scripts/faker_data.py && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - 8000:8000
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+  #     - celery
+
+  # celery:
+  #   build: .
+  #   command: celery -A myapp worker -l info
+  #   volumes:
+  #     - .:/app
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     - db
+  #     - redis
+
+  nginx:
+    image: nginx:latest
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    ports:
+      - "8080:80"
+    depends_on:
+      - web
+    links:
+      - web
+
+  static_html:
+    image: nginx:latest
+    volumes:
+      - ./lsc_frontend_simplified:/usr/share/nginx/html:ro
+    ports:
+      - "5500:80"
+    links:
+      - web
+
+volumes:
+  postgres_data:

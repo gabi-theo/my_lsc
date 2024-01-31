@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setare scoala</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+
+<div class="container mt-5">
+    <h1>Informatii scoala</h1>
+    <form id="step1Form">
+        <div class="form-group">
+            <label for="schoolName">Nume:</label>
+            <input type="text" class="form-control" id="schoolName" required>
+        </div>
+        <div class="form-group">
+            <label for="phoneNumber">Telefon:</label>
+            <input type="tel" class="form-control" id="phoneNumber" required>
+        </div>
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" class="form-control" id="email" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Next</button>
+    </form>
+</div>
+
+<script>
+    document.getElementById('step1Form').addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        // Fetch API endpoint for Step 1
+        fetch('http://127.0.0.1:8000/api/school_create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                name: document.getElementById('schoolName').value,
+                phone_contact: document.getElementById('phoneNumber').value,
+                email_contact: document.getElementById('email').value,
+            }),
+            credentials: "include", 
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Handle the response if needed
+            console.log(data);
+            window.location.href = "http://127.0.0.1:5500/lsc_frontend_simplified/school_trainers_create.html";
+            // Proceed to the next step or redirect to the next page
+            // window.location.href = 'next_step.html';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    });
+</script>
+
+</body>
+</html>

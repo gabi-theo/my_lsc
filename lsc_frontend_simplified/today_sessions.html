@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sesiuni si Recuperari</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Sesiuni</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item active">
+                        <a class="nav-link" href="#">Sesiuni si recuperari <span class="sr-only">(current)</span></a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Cursuri</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Absente</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Traineri</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Studenti</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Feedback</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Facturi</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Mailuri</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Pontaj</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Calendar</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="http://127.0.0.1:5500/lsc_frontend_simplified/login.html">Login</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+
+    <div class="container">
+        <h1>Sesiuni</h1>
+        <div class="form-group">
+            <label for="dateSelector">Data:</label>
+            <input type="date" id="dateSelector" class="form-control" onchange="fetchData()">
+        </div>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Tip</th>
+                    <th>Curs</th>
+                    <th>Numar sesiune</th>
+                    <th>Ora</th>
+                    <th>Trainer</th>
+                    <th>Info</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- Data will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="container">
+        <h1>Recuperari elevi</h1>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Elev</th>
+                    <th>Absent la cursul</th>
+                    <th>Absent la lectia</th>
+                    <th>Recupereaza la</th>
+                    <th>Ora</th>
+                    <th>Trainer</th>
+                    <th>Scoala</th>
+                    <th>Nr telefon elev</th>
+                </tr>
+            </thead>
+            <tbody id="table-makeups">
+                <!-- Data will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+    <div class="modal fade" id="itemInfoModal" tabindex="-1" role="dialog" aria-labelledby="itemInfoModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="itemInfoModalLabel">Detalii</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body" id="itemInfoBody">
+              <!-- Item information will be displayed here -->
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    <script>
+        // Function to fetch data from an API and populate the table
+        function fetchData() {
+            const selectedDate = document.getElementById('dateSelector').value;
+            fetch('http://127.0.0.1:8000/api/sessions/?date='+selectedDate, {
+                method: 'GET',
+                credentials: 'include',
+            },)
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById('table-body');
+                    tableBody.innerHTML = ''; // Clear existing table data
+
+                    data.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>Sesiune</td>
+                            <td>${item.course_session}</td>
+                            <td>${item.session_no}</td>
+                            <td>${item.time}</td>
+                            <td>${item.session_trainer}</td>
+                            <td><a href="http://127.0.0.1:5500/lsc_frontend_simplified/course_sessions.html?session_id=${item.id}" class="btn btn-info" role="button">Informatii sesiune</a></td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+
+                fetch('http://127.0.0.1:8000/api/absent_students/?make_up_date='+selectedDate, {
+                method: 'GET',
+                credentials: "include",
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data)
+                    const tableBody = document.getElementById('table-makeups');
+                    data.forEach(item => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${item.absent_participant_first_name} ${item.absent_participant_last_name}</td>
+                            <td>${item.absent_on_session}</td>
+                            <td>${item.session_number}</td>
+                            <td>${item.session_for_absence || "Recuperare"}</td>
+                            <td>${item.make_up_date_and_time}</td>
+                            <td>${item.make_up_trainer}</td>
+                            <td>${item.student_school}</td>
+                            <td>${item.absent_participant_phone_number1} ${item.absent_participant_phone_number2}</td>
+                            <td><a href="#" class="btn btn-info" role="button" onclick="showItemInfoModal('${item.id}', '${item.absent_participant_first_name}', '${item.absent_participant_last_name}', '${item.absent_on_session}', '${item.session_number}', '${item.session_for_absence || "Recuperare"}', '${item.make_up_date_and_time}', '${item.make_up_trainer}', '${item.student_school}', '${item.absent_participant_phone_number1} ${item.absent_participant_phone_number2}')">Informatii recuperare</a></td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        function showItemInfoModal(itemId, firstName, lastName, absentOnSession, sessionNumber, sessionForAbsence, makeUpDateAndTime, makeUpTrainer, studentSchool, phoneNumber) {
+            const modalBody = document.getElementById('itemInfoBody');
+            modalBody.innerHTML = `
+                <p><strong>Nume:</strong> ${firstName} ${lastName}</p>
+                <p><strong>Absent la grupa:</strong> ${absentOnSession}</p>
+                <p><strong>Numarul sesiunii:</strong> ${sessionNumber}</p>
+                <p><strong>Data si ora recuperare:</strong> ${makeUpDateAndTime}</p>
+                <p><strong>Make-up Trainer:</strong> ${makeUpTrainer}</p>
+                <p><strong>Scoala student:</strong> ${studentSchool}</p>
+                <p><strong>Numar telefon:</strong> ${phoneNumber}</p>
+                <button type="button" class="btn btn-danger" onclick="markStudentAbsentForMakeUp('${itemId}', 'absent')">
+                    Absent
+                </button>
+                <button type="button" class="btn btn-success" onclick="markStudentAbsentForMakeUp('${itemId}', 'present')">
+                    Prezent
+                </button>
+            `;
+
+            $('#itemInfoModal').modal('show');
+        }
+        // Call the fetchData function to populate the table
+        // Set the default value of the date selector to the current date
+    document.addEventListener("DOMContentLoaded", function() {
+        const currentDate = new Date();
+        const year = currentDate.getFullYear();
+        const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+        const day = currentDate.getDate().toString().padStart(2, '0');
+        const defaultDate = `${year}-${month}-${day}`;
+        
+        document.getElementById('dateSelector').value = defaultDate;
+
+        // Call the fetchData function on page load with the default date
+        fetchData();
+    });
+    function markStudentAbsentForMakeUp(absence_id, presence_type){
+            fetch('http://127.0.0.1:8000/api/make_up_presence/'+absence_id+"/"+presence_type+"/", {
+                method: 'POST',
+                credentials: "include",
+            })
+        }
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

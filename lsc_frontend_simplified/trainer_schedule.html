@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Program trainer</title>
+    <!-- Bootstrap CSS link -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Program trainer</h1>
+
+        <form id="daysOffForm">
+            <select id="trainer_dropdown"></select>
+            <div class="form-group">
+                <label for="firstDayOff">Data:</label>
+                <input type="date" id="firstDayOff" name="firstDayOff" class="form-control" required>
+            </div>
+
+            
+            <div class="form-group">
+                <label for="firstHourOff">Ora start:</label>
+                <input type="text" id="firstHourOff" name="firstHourOff" placeholder="HH:MM" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="lastHourOff">Ora sfarsit:</label>
+                <input type="text" id="lastHourOff" name="lastHourOff" placeholder="HH:MM" class="form-control" required>
+            </div>
+
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="onlineCheckbox">
+                <label class="form-check-label" for="onlineCheckbox">Doar online</label>
+            </div>
+        
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="availabilityCheckbox">
+                <label class="form-check-label" for="anotherCheckbox">Nu sunt disponibil</label>
+            </div>
+
+            <button type="button" onclick="createDaysOff()" class="btn btn-primary">Creaza</button>
+        </form>
+
+        <h2 class="mt-4">Program trainer</h2>
+        <table class="table" id="daysOffTable">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Zi</th>
+                    <th>Ora inceput</th>
+                    <th>Ora sfarsit</th>
+                    <th>Disponibilitate</th>
+                    <th>Doar online</th>
+                </tr>
+            </thead>
+            <tbody id="daysOffTableBody"></tbody>
+        </table>
+    </div>
+
+    <!-- Bootstrap JS and Popper.js scripts (required for Bootstrap functionality) -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+
+    <script>
+        function createDaysOff() {
+            var days = ['duminica', 'luni', 'marti', 'miercuri', 'joi', 'vineri', 'sambata']
+            var dropdown = document.getElementById('dayOffInfo')
+            var trainer_value = document.getElementById("trainer_dropdown").value
+            console.log(trainer_value)
+            var availableFromDate = new Date(document.getElementById('firstDayOff').value);
+
+            const request_body = {
+                    trainer: trainer_value,
+                    date: document.getElementById('firstDayOff').value,
+                    available_hour_from: document.getElementById('firstHourOff').value,
+                    available_hour_to: document.getElementById('lastHourOff').value,
+                    online_only: document.getElementById('onlineCheckbox').checked,
+                    is_available: ! document.getElementById('availabilityCheckbox').checked,
+                    year: availableFromDate.getFullYear(),
+                    week: getWeekNumber(availableFromDate),
+                    available_day: availableFromDate.getDay(),
+                }
+            console.log(request_body)
+            fetch('http://127.0.0.1:8000/api/trainer_schedule_interval/'+trainer_value+"/", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(request_body),
+                credentials: 'include',
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Days Off created:', data);
+                // You can handle the response as needed
+                fetchDaysOffTable();  // Refresh the table after creating a new entry
+            })
+            .catch(error => {
+                console.error('Error creating Days Off:', error);
+            });
+        }
+
+        function fetchDaysOffTable() {
+            var trainer_value = document.getElementById("trainer_dropdown").value
+            fetch('http://127.0.0.1:8000/api/trainer_schedule_interval/'+trainer_value+"/", {
+                method: 'GET',
+                credentials: 'include',
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data)
+                const daysOffTableBody = document.getElementById('daysOffTableBody');
+                daysOffTableBody.innerHTML = '';  // Clear existing table
+
+                data.forEach(trainerScheduleInterval => {
+                    console.log(trainerScheduleInterval)
+                    const row = daysOffTableBody.insertRow();
+                    row.insertCell(0).textContent = trainerScheduleInterval.date;
+                    row.insertCell(1).textContent = getDayName(trainerScheduleInterval.available_day);
+                    row.insertCell(2).textContent = trainerScheduleInterval.available_hour_from;
+                    row.insertCell(3).textContent = trainerScheduleInterval.available_hour_to;
+                    row.insertCell(4).textContent = trainerScheduleInterval.is_available ? 'Da' : 'Nu';
+                    row.insertCell(5).textContent = trainerScheduleInterval.online_only ? 'Da' : 'Nu';
+            });
+            })
+            .catch(error => {
+                console.error('Error fetching Days Off table:', error);
+            });
+        }
+
+        function getDayName(dayNumber) {
+            console.log("CALLED")
+            console.log(dayNumber)
+            const daysOfWeek = ["Luni", "Marti", "Miercuri", "Joi", "Vineri", "Sambata", "Duminica"];
+            return daysOfWeek[dayNumber - 1] || '';
+        }
+
+        function goToGroupSetup(){
+            window.location.href = 'http://127.0.0.1:5500/lsc_frontend_simplified/school_setup_groups.html';
+        }
+
+        function getWeekNumber(date) {
+            var d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+            var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        }
+
+        async function fetchTrainerData() {
+            url = "http://127.0.0.1:8000/api/trainers_from_school/"
+            const response = await fetch(url, {credentials: 'include'});
+            const data = await response.json();
+            const dropdown = document.getElementById("trainer_dropdown")
+            dropdown.innerHTML = '';
+            const option = document.createElement('option');
+            option.value = "---";
+            option.text = "---";
+            dropdown.appendChild(option);
+
+            // Populate dropdown options
+            data.forEach(item => {
+                const option = document.createElement('option');
+                    option.value = item.trainer;
+                    option.text = item.first_name + " " + item.last_name;
+                dropdown.appendChild(option);
+            });
+            dropdown.addEventListener("change", fetchDaysOffTable);
+        }
+
+        // Fetch the initial table when the page loads
+        fetchTrainerData();
+        fetchDaysOffTable();
+    </script>
+</body>
+</html>

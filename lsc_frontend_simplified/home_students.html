@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Studenti Overall</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script type="text/javascript"
+        src="cookie.js">
+    </script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Studenti Overall</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Sesiuni si recuperari <span class="sr-only">(current)</span></a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Cursuri</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Traineri</a>
+                    </li>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="#">Studenti</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Feedback</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Facturi</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Mailuri</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Pontaj</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Calendar</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="http://127.0.0.1:5500/lsc_frontend_simplified/login.html">Login</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+
+    <div class="container">
+        <h1>Absente</h1>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Curs</th>
+                    <th>Data sesiune</th>
+                    <th>Numar sesiune</th>
+                    <th>Recuperare programata</th>
+                    <th>Sugestii recuperare</th>
+                    <th>Programeaza recuperare</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- Data will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+
+    <script>
+        // Function to fetch data from an API and populate the table
+        function fetchData() {
+            fetch('http://127.0.0.1:8000/api/sessions?date=2023-10-27', {
+                method: 'GET',
+                // headers: {
+                //     "Authorization": "Bearer " + Cookie.auth_token
+                // },
+                credentials: 'include',
+            },)
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById('table-body');
+                    tableBody.innerHTML = ''; // Clear existing table data
+
+                    data.forEach(item => {
+                        const row = document.createElement('tr');
+                        console.log(item.id)
+                        row.innerHTML = `
+                            <td>Sesiune</td>
+                            <td>${item.course_session}</td>
+                            <td>${item.session_no}</td>
+                            <td>${item.time}</td>
+                            <td>${item.session_trainer}</td>
+                            <td><a href="http://127.0.0.1:5500/lsc_frontend_simplified/course_sessions.html?session_id=${item.id}" class="btn btn-info" role="button">Informatii sesiune</a></td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+            }
+    </script>
+</body>

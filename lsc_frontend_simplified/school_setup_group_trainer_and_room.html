@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Courses</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Manage Courses</h1>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Course Name</th>
+                    <th>Students</th>
+                    <th>Trainer</th>
+                    <th>Room</th>
+                    <th>Only online course</th>
+                    <th>Online link</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="coursesTableBody"></tbody>
+        </table>
+        <a href="http://127.0.0.1:5500/lsc_frontend_simplified/today_sessions.html" class="btn btn-info" role="button">Finalizeaza</a>
+    </div>
+    <br>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        // Fetch courses, trainers, and rooms from different endpoints
+        async function fetchData(url_name) {
+            url = "http://127.0.0.1:8000/api/" + url_name
+            const response = await fetch(url, {credentials: 'include'});
+            const data = await response.json();
+            return data;
+        }
+
+        async function populateDropdown(url, dropdown, extra_param, data) {
+
+            // Clear existing options
+            dropdown.innerHTML = '';
+            const option = document.createElement('option');
+            option.value = "---";
+            option.text = "---";
+            dropdown.appendChild(option);
+
+            // Populate dropdown options
+            data.forEach(item => {
+                const option = document.createElement('option');
+                if (url === "rooms") {
+                    option.value = item.id;
+                    option.text = item.room_name;
+                    if (extra_param === item.id) {
+                        option.selected = true;
+                    }
+                } else if (url === "trainers-from-school") {
+                    option.value = item.trainer;
+                    option.text = item.first_name + " " + item.last_name;
+                    if (extra_param === item.trainer) {
+                        option.selected = true;
+                    }
+                }
+                dropdown.appendChild(option);
+            });
+        }
+
+        async function populateTable() {
+            const coursesData = await fetchData('course_schedule/');
+            const trainer_data = await fetchData('trainers_from_school/');
+            const room_data = await fetchData('rooms/');
+            const tableBody = document.getElementById('coursesTableBody');
+            tableBody.innerHTML = '';
+            coursesData.forEach(course => {
+                const row = document.createElement('tr');
+                const trainerDropdown = document.createElement('select');
+                trainerDropdown.id = `trainerDropdown_${course.id}`;
+                const roomDropdown = document.createElement('select');
+                roomDropdown.id = `roomDropdown_${course.id}`;
+
+                row.innerHTML = `
+                    <td>${course.group_name}</td>
+                    <td>${course.students.length}</td>
+                    <td></td>
+                    <td></td>
+                    <td>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="checkbox_${course.id}" value="onl" ${course.course_type === 'onl' ? 'checked' : ''}>
+                        </div>
+                    </td>
+                    <td>
+                        <input type="text" class="form-control"  value="${course.online_link}" id="link_${course.id}" placeholder="online link" aria-label="Username" aria-describedby="basic-addon1">
+                    </td>
+                    <td>
+                        <button class="btn btn-primary" onclick="saveData('${course.id}')">Save</button>
+                    </td>
+                `;
+
+                row.children[2].appendChild(trainerDropdown);
+                row.children[3].appendChild(roomDropdown);
+                tableBody.appendChild(row);
+
+                // Populate dropdowns for each row
+                populateDropdown('trainers-from-school', trainerDropdown, course.default_trainer, trainer_data);
+                populateDropdown('rooms', roomDropdown, course.classroom, room_data);
+            });
+        }
+
+        async function saveData(courseId) {
+            console.log("saving")
+            const trainerDropdown = document.getElementById(`trainerDropdown_${courseId}`);
+            const roomDropdown = document.getElementById(`roomDropdown_${courseId}`);
+            const only_online = document.getElementById(`checkbox_${courseId}`);
+            const online_link = document.getElementById(`link_${courseId}`);
+            const selectedTrainerId = trainerDropdown.value;
+            const selectedRoomId = roomDropdown.value;
+            url = 'http://127.0.0.1:8000/api/course_schedule/'+courseId+'/update/'
+            console.log(only_online)
+            if (only_online.checked){
+                course_type = "onl"
+            }
+            else if (online_link.value && online_link.value !== "null"){
+                course_type = "hbr"
+            }
+            else {
+                course_type = "sed"
+            }
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: "include",
+                body: JSON.stringify({
+                    default_trainer: selectedTrainerId,
+                    classroom: selectedRoomId,
+                    online_link: online_link.value,
+                    course_type: course_type,
+                }),
+            });
+            console.log(`Data for Course ID ${courseId} saved. Trainer: ${selectedTrainerId}, Room: ${selectedRoomId}`);
+            const data = await response.json();
+            console.log(data);
+            alert("Trainer salvat cu succes")
+        }
+
+        // Fetch and populate the table on page load
+        populateTable();
+    </script>
+</body>
+</html>

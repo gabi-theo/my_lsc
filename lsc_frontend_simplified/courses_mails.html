@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mail-uri cursuri</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Mail-uri cursuri</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Sesiuni si recuperari <span class="sr-only">(current)</span></a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Cursuri</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Traineri</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Studenti</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Feedback</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Facturi</a>
+                    </li>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="#">Mailuri</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Pontaj</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Calendar</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="http://127.0.0.1:5500/lsc_frontend_simplified/login.html">Login</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+
+    <div class="container mt-5">
+        <h1>Grupe</h1>
+    
+        <!-- Table Search Box -->
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <input type="text" class="form-control" id="tableSearchInput" placeholder="Search...">
+            </div>
+        </div>
+    
+        <!-- Table -->
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Grupa</th>
+                    <th>Zi - ora</th>
+                    <th>Trimite mail</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- Data will be inserted here -->
+            </tbody>
+        </table>
+    
+        <!-- Selected Rows Button -->
+        <div class="row">
+            <div class="col-md-6">
+                <button class="btn btn-primary" id="showSelectedRowsBtn" data-toggle="modal" data-target="#selectedRowsModal">
+                    Trimite mail
+                </button>
+            </div>
+        </div>
+    
+        <!-- Modal for Selected Rows -->
+        <div class="modal" id="selectedRowsModal">
+            <div class="modal-dialog">
+                <div class="modal-content">
+    
+                    <!-- Modal Header -->
+                    <div class="modal-header">
+                        <h4 class="modal-title">Continut mail</h4>
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    </div>
+    
+                    <!-- Modal Body -->
+                    <div class="modal-body">
+                        <label for="subjectInput">Subiect:</label>
+                        <input type="text" class="form-control" id="subjectInput">
+    
+                        <label for="contentInput">Continut:</label>
+                        <textarea class="form-control" id="contentInput" rows="4"></textarea>
+                    </div>
+    
+                    <!-- Modal Footer -->
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" id="sendEmailBtn">Send Email</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    </div>
+    
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            let selectedRows = [];
+    
+            // Function to fetch data from an API and populate the table
+            function fetchData() {
+                fetch('http://127.0.0.1:8000/api/course_schedule_details/', {
+                    method: 'GET',
+                    credentials: 'include',
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        renderTable(data); // Initial rendering of the table
+                        setupSearch(data); // Set up search functionality
+                        setupCheckboxListeners(); // Set up checkbox listeners
+                        setupSelectedRowsButton(); // Set up selected rows button
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+    
+            // Function to render table rows based on the data
+            function renderTable(data) {
+                const tableBody = document.getElementById('table-body');
+                tableBody.innerHTML = ''; // Clear existing table data
+
+                data.forEach(item => {
+                const row = document.createElement('tr');
+                const isChecked = selectedRows.includes(item.id); // Check if the row is in selectedRows
+                row.innerHTML = `
+                    <td>${item.group_name}</td>
+                    <td>${item.day} - ${item.time}</td>
+                    <td><input type="checkbox" data-row-id="${item.id}" ${isChecked ? 'checked' : ''} /></td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+                // Reapply checkbox event listeners
+                setupCheckboxListeners();
+            }
+    
+            // Function to set up search functionality
+            function setupSearch(data) {
+                document.getElementById("tableSearchInput").addEventListener("input", function () {
+                    const searchTerm = this.value.trim().toLowerCase();
+    
+                    // Filter data based on the search term
+                    const filteredData = data.filter(item =>
+                        item.group_name.toLowerCase().includes(searchTerm)
+                    );
+    
+                    // Render the table with the filtered data
+                    renderTable(filteredData);
+                });
+            }
+    
+            // Function to set up checkbox listeners
+            function setupCheckboxListeners() {
+                document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.addEventListener('change', function () {
+                        const rowId = this.getAttribute('data-row-id');
+                        if (this.checked) {
+                            // Add the row ID to the selectedRows list
+                            selectedRows.push(rowId);
+                        } else {
+                            // Remove the row ID from the selectedRows list
+                            selectedRows = selectedRows.filter(id => id !== rowId);
+                        }
+                        console.log(selectedRows)
+                    });
+                });
+            }
+    
+            // Function to set up selected rows button
+            function setupSelectedRowsButton() {
+                document.getElementById("showSelectedRowsBtn").addEventListener("click", function () {
+                    // Display the content of the selectedRows list in the modal
+                    const uniqueRows = [...new Set(selectedRows)];
+                    const subject = document.getElementById("subjectInput").value;
+                    const content = document.getElementById("contentInput").value;
+                });
+                document.getElementById("sendEmailBtn").addEventListener("click", function () {
+                    const uniqueRows = [...new Set(selectedRows)];
+                    const subject = document.getElementById("subjectInput").value;
+                    const content = document.getElementById("contentInput").value;
+                    console.log(subject, content, uniqueRows)
+                    const requestBody = JSON.stringify({
+                        groups: uniqueRows.join(','),
+                        subject: subject,
+                        message: content,
+                        send_mail: true
+                    });
+                    fetch('http://127.0.0.1:8000/api/send_group_email/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: requestBody,
+                        credentials: 'include',  // Include credentials if needed
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                });
+            }
+    
+            // Fetch data and set up search, checkboxes, and selected rows button on page load
+            fetchData();
+        });
+    </script>
+    
+    <!-- Bootstrap JS and jQuery scripts -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.0.7/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    
+    </body>
+    </html>

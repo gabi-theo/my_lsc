@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zile libere</title>
+    <!-- Bootstrap CSS link -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Zile libere</h1>
+
+        <form id="daysOffForm">
+            <div class="form-group">
+                <label for="firstDayOff">Inceput:</label>
+                <input type="date" id="firstDayOff" name="firstDayOff" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="lastDayOff">Sfarsit:</label>
+                <input type="date" id="lastDayOff" name="lastDayOff" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="dayOffInfo">Info:</label>
+                <input type="text" id="dayOffInfo" name="dayOffInfo" class="form-control" required>
+            </div>
+
+            <button type="button" onclick="createDaysOff()" class="btn btn-primary">Creaza</button>
+            <button type="button" onclick="goToGroupSetup()" class="btn btn-primary">Seteaza cursuri</button>
+        </form>
+
+        <h2 class="mt-4">Lista zile libere</h2>
+        <table class="table" id="daysOffTable">
+            <thead>
+                <tr>
+                    <th>Inceput</th>
+                    <th>Sfarsit</th>
+                    <th>Info</th>
+                </tr>
+            </thead>
+            <tbody id="daysOffTableBody"></tbody>
+        </table>
+    </div>
+
+    <!-- Bootstrap JS and Popper.js scripts (required for Bootstrap functionality) -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+
+    <script>
+        function createDaysOff() {
+            fetch('http://127.0.0.1:8000/api/days_off/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    first_day_off: document.getElementById('firstDayOff').value,
+                    last_day_off: document.getElementById('lastDayOff').value,
+                    day_off_info: document.getElementById('dayOffInfo').value,
+                }),
+                credentials: 'include',
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Days Off created:', data);
+                // You can handle the response as needed
+                fetchDaysOffTable();  // Refresh the table after creating a new entry
+            })
+            .catch(error => {
+                console.error('Error creating Days Off:', error);
+            });
+        }
+
+        function fetchDaysOffTable() {
+            fetch('http://127.0.0.1:8000/api/days_off/', {
+                method: 'GET',
+                credentials: 'include',
+            })
+            .then(response => response.json())
+            .then(data => {
+                const daysOffTableBody = document.getElementById('daysOffTableBody');
+                daysOffTableBody.innerHTML = '';  // Clear existing table
+
+                data.forEach(dayOff => {
+                    const row = daysOffTableBody.insertRow();
+                    row.insertCell(0).textContent = dayOff.first_day_off;
+                    row.insertCell(1).textContent = dayOff.last_day_off;
+                    row.insertCell(2).textContent = dayOff.day_off_info;
+                });
+            })
+            .catch(error => {
+                console.error('Error fetching Days Off table:', error);
+            });
+        }
+        
+        function goToGroupSetup(){
+            window.location.href = 'http://127.0.0.1:5500/lsc_frontend_simplified/school_setup_groups.html';
+        }
+        // Fetch the initial table when the page loads
+        fetchDaysOffTable();
+    </script>
+</body>
+</html>

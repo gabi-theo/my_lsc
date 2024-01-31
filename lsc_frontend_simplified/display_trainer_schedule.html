@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trainer Availability</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+
+<div class="container mt-5">
+    <h2>Trainer Availability</h2>
+
+    <!-- Date Dropdown -->
+    <div class="form-group">
+        <label for="dateSelector">Data:</label>
+        <input type="date" id="dateSelector" class="form-control" onchange="fetchDataAndPopulate()">
+    </div>
+
+    <!-- Trainer Availability Table -->
+    <table class="table mt-3">
+        <thead>
+            <tr>
+                <th>Trainer</th>
+                <th>Day</th>
+                <th>Available Intervals</th>
+                <th>Unavailable Intervals</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="availabilityTableBody">
+            <!-- Populate this dynamically using JavaScript -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Bootstrap JS and Popper.js (required for Bootstrap) -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.0.7/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<!-- JavaScript to fetch data and populate dropdown and table -->
+<script>
+    // Function to fetch data from the API and populate dropdown and table
+    async function fetchDataAndPopulate() {
+        const dateDropdown = document.getElementById('dateSelector');
+        const tableBody = document.getElementById('availabilityTableBody');
+        // Fetch data from the API
+        const date = dateDropdown.value || new Date().toISOString().split('T')[0];
+        const apiUrl = `http://127.0.0.1:8000/api/trainers_availability/${date}/`;
+
+        try {
+            const response = await fetch(apiUrl, { credentials: "include" });
+            const data = await response.json();
+            // Populate date dropdown
+            dateDropdown.innerHTML = `<option value="${date}">${date}</option>`;
+
+            // Clear existing table rows
+            tableBody.innerHTML = '';
+            // Iterate through trainer availability data and populate table
+            console.log(data)
+            for (const trainerName in data) {
+                const trainerData = data[trainerName];
+                for (const dayName in trainerData.days_available) {
+                    const dayData = trainerData.days_available[dayName];
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${trainerName}</td>
+                        <td>${dayName}</td>
+                        <td>${formatIntervals(dayData.available_intervals)}</td>
+                        <td>${formatIntervals(dayData.unavailable_intervals)}</td>
+                    `;
+                    const buttonContainer = createButtons(dayData.available_intervals, trainerName, dayName, trainerData.trainer_id);
+                    const cell = row.insertCell(4);
+                    cell.appendChild(buttonContainer);
+
+                    tableBody.appendChild(row);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching data:', error);
+        }
+    }
+
+    // Function to format intervals for display
+    function formatIntervals(intervals) {
+        return intervals.map(interval => `${interval.start} - ${interval.end}`).join('<br>');
+    }
+
+    // Function to create buttons for each available interval
+    function createButtons(availableIntervals, trainerName, dayName, trainer_id) {
+        const buttonContainer = document.createElement('div');
+
+        availableIntervals.forEach((interval, index) => {
+            const button = document.createElement('button');
+            console.log(interval)
+            start = interval.start
+            end = interval.end
+            button.className = 'btn btn-primary mr-2';
+            button.textContent = `Interval ${start} - ${end}`;
+
+            button.addEventListener('click', function() {
+                showPopup(trainerName, dayName, interval, trainer_id);
+            });
+
+            buttonContainer.appendChild(button);
+        });
+
+        return buttonContainer;
+    }
+
+    function showPopup(trainer, day, interval, trainer_id) {
+        const modalContent = `
+            <div class="modal fade" id="intervalModal" tabindex="-1" role="dialog" aria-labelledby="intervalModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="intervalModalLabel">Interval Details</h5>
+                            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Trainer: ${trainer}</p>
+                            <p>Zi: ${day}</p>
+                            <p>Interval: ${interval.start} - ${interval.end}</p>
+                            <div class="mt-3">
+                                <label for="studentDropdown">Select student:</label>
+                                <select id="studentDropdown" class="form-control"></select>
+                            </div>
+                            <div class="mt-3">
+                                <p>Selecteaza intervalul recuperarii:</p>
+                                <div id="buttonContainer"></div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-success" onclick="setMakeUp('${trainer}', '${day}', '${interval.start}', '${trainer_id}')">Selecteaza recuperare</button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Append the modal content to the body
+        document.body.insertAdjacentHTML('beforeend', modalContent);
+
+        // Get the container inside the modal
+        const buttonContainer = document.getElementById('buttonContainer');
+
+        // Create and append buttons
+        create30MinuteButtons(buttonContainer, interval.start, interval.end);
+        fetchStudentData();
+        // Show the modal
+        $('#intervalModal').modal('show');
+
+        // Remove the modal from the DOM after it's hidden
+        $('#intervalModal').on('hidden.bs.modal', function () {
+            $(this).remove();
+        });
+    }
+
+    // Function to create buttons with 30-minute intervals
+    function create30MinuteButtons(container, startTime, endTime) {
+        var startTimeCheck = new Date(`2000-01-01T${startTime}`);
+        var endTimeCheck = new Date(`2000-01-01T${endTime}`);
+        
+        while (startTimeCheck.valueOf() < endTimeCheck.valueOf()) {
+            const currentStartTime = startTime; // Create a new variable inside the loop scope
+
+            const button = document.createElement('button');
+            button.className = 'btn btn-light mr-2';
+            button.textContent = `${formatTime(currentStartTime)} - ${formatTime(add30Minutes(currentStartTime))}`;
+
+            button.addEventListener('click', function() {
+                handleButtonClick(currentStartTime);
+            });
+
+            container.appendChild(button);
+
+            // Move to the next 30-minute interval
+            startTime = add30Minutes(startTime);
+            startTimeCheck = new Date(`2000-01-01T${startTime}`);
+        }
+    }
+
+    // Function to format time in HH:mm format
+    function formatTime(time) {
+        if (typeof time === 'string') {
+            // Split the time string and create a new Date object
+            const [hours, minutes, seconds] = time.split(':').map(Number);
+            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        }
+
+        const hours = time.getHours().toString().padStart(2, '0');
+        const minutes = time.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+
+    // Function to add 30 minutes to a time
+    function add30Minutes(time) {
+        if (typeof time === 'string') {
+            // Split the time string and create a new Date object
+            const [hours, minutes, seconds] = time.split(':').map(Number);
+            const newTime = new Date();
+            newTime.setHours(hours);
+            newTime.setMinutes(minutes + 30);
+            return `${String(newTime.getHours()).padStart(2, '0')}:${String(newTime.getMinutes()).padStart(2, '0')}`;
+        }
+
+        const newTime = new Date(time);
+        newTime.setMinutes(newTime.getMinutes() + 30);
+        return `${String(newTime.getHours()).padStart(2, '0')}:${String(newTime.getMinutes()).padStart(2, '0')}`;
+    }
+
+    // Variable to store the selected start time
+    let selectedStartTime = null;
+    let selectedButton = null;
+
+    // Function to handle button click
+    function handleButtonClick(startTime) {
+    // Log the selected start time
+        console.log('Selected Start Time:', formatTime(startTime));
+
+        // Store the selected start time in the variable
+        selectedStartTime = startTime;
+
+        // Remove the selection styling from the previously selected button
+        if (selectedButton) {
+            selectedButton.classList.remove('btn-primary');
+            selectedButton.classList.add('btn-light');
+        }
+
+        // Mark the current button as selected
+        event.target.classList.add('btn-primary');
+        event.target.classList.remove('btn-light');
+
+        // Update the selected button reference
+        selectedButton = event.target;
+    }
+
+    // Initial data fetch and populate on page load
+    fetchDataAndPopulate();
+
+    // Attach event listener to date dropdown to fetch data on change
+    document.getElementById('dateSelector').addEventListener('change', fetchDataAndPopulate);
+
+    function fetchStudentData() {
+        fetch('http://127.0.0.1:8000/api/student_absent/775ef5af-c007-4ddf-8d56-076d0ead624d/775ef5af-c007-4ddf-8d56-076d0ead624d', {
+            method: 'GET',
+            credentials: 'include',
+        })
+        .then(response => response.json())
+        .then(data => {
+            const studentDropdown = document.getElementById('studentDropdown');
+
+            data.forEach(item => {
+                // Add options to the dropdown only for the 'else' condition
+                if (!item.has_make_up_scheduled || item.is_absent_for_absence) {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = `${item.absent_participant_first_name} ${item.absent_participant_last_name} - ${item.absent_on_session} - ${item.session_number}`;
+                    studentDropdown.appendChild(option);
+                }
+            });
+        });
+    }
+
+    function setMakeUp(trainer, day, interval_start, trainer_id){
+        const postData = {
+            selected_start_time: selectedStartTime,
+            absent_id: document.getElementById('studentDropdown').value,
+            day: day,
+            date: document.getElementById('dateSelector').value,
+            trainer_id: trainer_id,
+        };
+
+        // Make POST request
+        fetch('http://127.0.0.1:8000/api/make_up_from_trainer_schedule/', {
+        method: 'POST',
+        credentials: "include",
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(postData),
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Response from server:', data);
+            // Handle the response data as needed
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Handle errors if any
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const currentDate = new Date();
+        const year = currentDate.getFullYear();
+        const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+        const day = currentDate.getDate().toString().padStart(2, '0');
+        const defaultDate = `${year}-${month}-${day}`;
+        
+        document.getElementById('dateSelector').value = defaultDate;
+
+        // Call the fetchData function on page load with the default date
+        fetchDataAndPopulate();
+    });
+</script>
+
+</body>
+</html>

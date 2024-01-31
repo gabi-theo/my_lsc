@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cursuri</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script type="text/javascript"
+        src="cookie.js">
+    </script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Cursuri</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Sesiuni si recuperari <span class="sr-only"></span></a>
+                    </li>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="#">Cursuri</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Absente</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Traineri</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Studenti</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Feedback</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Facturi</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Mailuri</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Pontaj</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Calendar</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="http://127.0.0.1:5500/lsc_frontend_simplified/login.html">Login</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+
+    <div class="container">
+        <h1>Cursuri</h1>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Curs</th>
+                    <th>Tip</th>
+                    <th>Numar sesiune</th>
+                    <th>Ora</th>
+                    <th>Trainer</th>
+                    <th>Nr. Studenti</th>
+                    <th>Detalii studenti</th>
+                    <th>Cursuri la alte scoli</th>
+                    <th>Profitabilitate grupa</th>
+                    <th>Sesiuni grupa</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- Data will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // Function to fetch data from an API and populate the table
+        function fetchData() {
+            fetch('http://127.0.0.1:8000/api/course_schedule/', {
+                method: 'GET',
+                // headers: {
+                //     "Authorization": "Bearer " + Cookie.auth_token
+                // },
+                credentials: 'include',
+            },)
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById('table-body');
+                    tableBody.innerHTML = ''; // Clear existing table data
+
+                    data.forEach(item => {
+                        const row = document.createElement('tr');
+                        console.log(item)
+                        row.innerHTML = `
+                            <td>${item.id}</td>
+                            <td>${item.group_name}</td>
+                            <td>${item.course}</td>
+                            <td>${item.current_session}</td>
+                            <td>${item.day} - ${item.time}</td>
+                            <td>${item.defult_trainer}</td>
+                            <td>${item.students.length}</td>
+                            <td><a href="#" class="btn btn-info" role="button">Info Studenti</a></td>
+                            <td><a href="#" class="btn btn-info" role="button">Cursuri alte Scoli</a></td>
+                            <td><a href="#"" class="btn btn-info" role="button">Info Financiar</a></td>
+                            <td><a href="http://127.0.0.1:5500/lsc_frontend_simplified/sessions_for_course.html?course_schedule_id=${item.id}"" class="btn btn-info" role="button">Sesiuni</a></td>
+                            <td><a href="#"" class="btn btn-info" role="button">Update Grupa</a></td>
+                            `;
+                        tableBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+
+                fetch('http://127.0.0.1:8000/api/make_ups/?date='+year+"-"+month+"-"+day, {
+                method: 'GET',
+                credentials: "include",
+                // headers: {
+                //     "Authorization": "Bearer " + Cookie.auth_token
+                // }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.getElementById('table-body');
+                    data.forEach(item => {
+                        console.log(item)
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>Recuperare</td>
+                            <td>${item.make_up_for_session}</td>
+                            <td>${item.make_up_for_session_number}</td>
+                            <td>${item.make_up_time}</td>
+                            <td>${item.make_up_trainer}</td>
+                            <td><a href="#link" class="btn btn-info" role="button">Informatii recuperare</a></td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        // Call the fetchData function to populate the table
+        fetchData();
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
