@@ -210,13 +210,18 @@ class MakeUpChooseView(generics.GenericAPIView):
 
 
 class MakeUpSessionsAvailableView(mixins.CreateModelMixin, generics.GenericAPIView):
+    permission_classes = [AllowAny]
     serializer_class = MakeUpSerializer
 
     def get(self, request, *args, **kwargs):
         make_up_type = request.GET.get('make_up_type') # onl, sed, any
         absence_id = request.GET.get('absence_id')
-        school = request.user.user_school.first()
         absence = AbsenceService.get_absence_by_id(absence_id)
+        if request.user.is_anonymous:
+            school = absence.absent_on_session.course_session.school
+        else:
+            school = request.user.user_school.first()
+
         make_up_options = {
             "onl": {
                 "courses": [],
@@ -234,19 +239,19 @@ class MakeUpSessionsAvailableView(mixins.CreateModelMixin, generics.GenericAPIVi
                 absence, school, type=make_up_type)
             make_up_options["onl"]["courses"] =  SessionService.get_next_sessions_for_absence(
                 absence, school, make_up_type)
-            make_up_options["onl"]["30_min"] = \
+            make_up_options["onl"]["30_mins"] = \
                 MakeUpService.is_make_up_possible_online_before_or_after_class_for_absence(absence, school)
         elif make_up_type == "sed":
             make_up_options["sed"]["make_ups"] = MakeUpService.get_make_ups_for_session(
                 absence, school, type=make_up_type)
             make_up_options["sed"]["courses"] =  SessionService.get_next_sessions_for_absence(
                 absence, school, make_up_type)
-            make_up_options["sed"]["30_min"] = \
+            make_up_options["sed"]["30_mins"] = \
                 MakeUpService.is_make_up_possible_sed_before_or_after_class_for_absence(absence, school)
         else:
-            make_up_options["onl"]["30_min"] = \
+            make_up_options["onl"]["30_mins"] = \
                 MakeUpService.is_make_up_possible_online_before_or_after_class_for_absence(absence, school)
-            make_up_options["sed"]["30_min"] = \
+            make_up_options["sed"]["30_mins"] = \
                 MakeUpService.is_make_up_possible_sed_before_or_after_class_for_absence(absence, school)
             make_up_options["sed"]["make_ups"] = make_up_options["onl"]["make_ups"] = MakeUpService.get_make_ups_for_session(
                 absence, school, type=make_up_type)
@@ -348,9 +353,12 @@ class UploadCourseExcelView(APIView):
 
 ######################################################## TRAINERS VIEWS
 class TrainersAvailabilityView(generics.GenericAPIView):
+    permission_classes = [AllowAny]
+
     def get(self, request, *args, **kwargs):
+        school = self.kwargs.get("school") if self.kwargs.get("school") else self.request.user.user_school.all().first()
         trainers_availability = TrainerService.get_trainers_from_school_availability_by_date(
-            self.request.user.user_school.all().first(),
+            school,
             self.kwargs.get("date"),
         )
         return Response(trainers_availability, status=status.HTTP_200_OK)
@@ -427,6 +435,8 @@ class StudentCourseScheduleView(APIView):
 
 
 class StudentAbsentView(APIView):
+    permission_classes = [AllowAny]
+
     def post(self, request, *args, **kwargs):
         student = StudentService.get_student_by_id(kwargs['student_id'])
         session = SessionService.get_session_by_id(kwargs["session_id"]).first()
@@ -438,10 +448,18 @@ class StudentAbsentView(APIView):
         return Response({"Student marked successfully as absent"}, status=status.HTTP_200_OK)
 
     def get(self, request, *args, **kwargs):
-        absences = AbsenceService.get_all_absences_from_school(
-            school=request.user.user_school.first())
-        serializer = AbsencesSerializer(absences, many=True)
-        return Response(serializer.data)
+        if not request.user.is_anonymous and request.user.role == "coordinator":
+            absences = AbsenceService.get_all_absences_from_school(
+                school=request.user.user_school.first())
+            serializer = AbsencesSerializer(absences, many=True)
+            return Response(serializer.data)
+        else:
+            absence = AbsenceService.get_absence_by_missed_session_id_and_student_id(
+                kwargs['session_id'],
+                kwargs['student_id'], 
+            )
+            serializer = AbsencesSerializer(absence)
+            return Response(serializer.data)
 
 
 class StudentPresenceView(APIView):

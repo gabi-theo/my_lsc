@@ -54,7 +54,7 @@ urlpatterns = [
     path("course_excel_upload/", UploadCourseExcelView.as_view()),
     path("get_available_make_ups/", MakeUpSessionsAvailableView.as_view()),
     path("sessions_from_course/<uuid:pk>/", SessionCourseListView.as_view()),
-    path("make-up-choose/<str:absence_id>/<str:session_option>/<str:make_up_option>/<str:send_email>", MakeUpChooseView.as_view()),
+    path("make_up_choose/<str:absence_id>/<str:session_option>/<str:make_up_option>/<str:send_email>/", MakeUpChooseView.as_view()),
     path("make_up_from_trainer_schedule/", MakeUpTrainerScheduleView.as_view()),
     path("make_up_presence/<uuid:absence_id>/<str:presence_type>/", StudentMakeUpAbsentView.as_view()),
     path("send_group_email", SendEmailToGroupsView.as_view()),
@@ -64,7 +64,7 @@ urlpatterns = [
     path("trainers_from_school/", TrainerFromSchoolListView.as_view()),
     path("trainer_create/", TrainerCreateView.as_view()),
     path("trainer_schedule_interval/<uuid:pk>/", TrainerScheduleIntervalListCreateView.as_view()),
-    path("trainers_availability/<str:date>/", TrainersAvailabilityView.as_view()),
+    path("trainers_availability/<str:date>/<str:school>/", TrainersAvailabilityView.as_view()),
 
     ################################ STUDENTS ENDPOINTS
     path("absent_students/", AbsentStudentsView.as_view()),

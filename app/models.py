@@ -333,12 +333,13 @@ class SessionPresence(models.Model):
     STATUS = (
         ("present", "Present"),
         ("absent", "Absent"),
-        ("made_up", "Made Up"),
+        ("made_up_complete", "Made Up Complete"),
+        ("made_up_setup", "Made Up Setup"),
     )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     student = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True, blank=True, related_name="student_presences")
     session = models.ForeignKey(Session, on_delete=models.SET_NULL, null=True, blank=True, related_name="session_presences")
-    status = models.CharField(max_length=10, choices=STATUS)
+    status = models.CharField(max_length=20, choices=STATUS)
 
 
 class MakeUp(models.Model):
