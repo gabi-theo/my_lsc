@@ -11,6 +11,7 @@ from app.views import (
     MakeUpChooseView,
     MakeUpSessionsAvailableView,
     MakeUpTrainerScheduleView,
+    NewsView,
     ResetPasswordView,
     RoomListCreateView,
     SchoolCreateView,
@@ -45,6 +46,7 @@ urlpatterns = [
     path("days_off/", DaysOffListView.as_view()),
     path("rooms/", RoomListCreateView.as_view()),
     path("school_create/", SchoolCreateView.as_view()),
+    path("news/", NewsView.as_view()),
 
     ################################ COURSES AND SESSIONS ENDPOINTS
     path("course_schedule/", CourseScheduleListView.as_view()),

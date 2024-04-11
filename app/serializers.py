@@ -9,6 +9,7 @@ from app.models import (
     CourseSchedule,
     DaysOff,
     MakeUp,
+    News,
     Room,
     School,
     Session,
@@ -379,3 +380,9 @@ class TrainerScheduleSerializer(serializers.ModelSerializer):
 ######################################################### OTHER SERIALIZERS
 class ImportSerializer(serializers.Serializer):
     file = serializers.FileField()
+
+
+class NewsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = News
+        fields = "__all__"

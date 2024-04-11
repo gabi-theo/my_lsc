@@ -497,3 +497,14 @@ class Invoice(models.Model):
     invoice_no = models.CharField(max_length=50)
     invoice_status = models.CharField(max_length=20, choices=INVOICE_STATUS, null=True, blank=True)
     invoice_date_time = models.DateTimeField(default=datetime.now())
+
+
+class News(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=50)
+    short_description = models.CharField(max_length=100)
+    text = models.TextField(max_length=1000)
+    created_at = models.DateTimeField(auto_now_add=True)
+    school = models.ForeignKey(School, on_delete=models.CASCADE)
+    news_for_group = models.ForeignKey(CourseSchedule, null=True, blank=True, on_delete=models.SET_NULL)
+    news_for_student = models.ForeignKey(Student, null=True, blank=True, on_delete=models.SET_NULL)

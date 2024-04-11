@@ -19,6 +19,7 @@ from app.serializers import (
     DaysOffSerializer,
     ImportSerializer,
     MakeUpSerializer,
+    NewsSerializer,
     ResetPasswordSerializer,
     RoomSerializer,
     SchoolSetupSerializer,
@@ -34,6 +35,7 @@ from app.serializers import (
 from app.services.absences import AbsenceService
 from app.services.courses import CourseService
 from app.services.makeups import MakeUpService
+from app.services.news import NewsService
 from app.services.school import SchoolService
 from app.services.sessions import SessionService
 from app.services.students import StudentService
@@ -497,3 +499,12 @@ class UploadStudentsExcelView(APIView):
             return Response({'message': 'Data imported successfully'}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class NewsView(generics.ListAPIView):
+    serializer_class = NewsSerializer
+
+    def get_queryset(self):
+        print(self.request.user)
+        print(self.request.user.user_school.all().first())
+        return NewsService.get_news_by_school(self.request.user.user_school.all().first())
