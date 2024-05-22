@@ -112,5 +112,4 @@ class TrainerService:
         return TrainerSchedule.objects.filter(
             school=school,
             date=date,
-            is_available=True
         )

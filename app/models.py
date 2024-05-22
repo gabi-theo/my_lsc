@@ -177,8 +177,6 @@ class TrainerFromSchool(models.Model):
 
 class Parent(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.OneToOneField(
-        User, on_delete=models.SET_NULL, null=True, blank=True)
     school = models.ForeignKey(
         School,
         on_delete=models.CASCADE,
@@ -204,6 +202,8 @@ class Parent(models.Model):
 
 class Student(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.OneToOneField(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="student_user")
     parent = models.ForeignKey(Parent, on_delete=models.CASCADE, related_name="children")
     first_name = models.CharField(max_length=50, null=False, blank=False)
     last_name = models.CharField(max_length=50, null=False, blank=False)
@@ -303,8 +303,44 @@ class TrainerSchedule(models.Model):
     available_hour_from = models.TimeField()
     available_hour_to = models.TimeField()
     online_only = models.BooleanField(default=False)
-    is_available = models.BooleanField(default=True)
     school = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True)
+
+
+class SchoolSchedule(models.Model):
+    DAYS = (
+        ("luni", "Luni"),
+        ("marti", "Marti"),
+        ("miercuri", "Miercuri"),
+        ("joi", "Joi"),
+        ("vineri", "Vineri"),
+        ("sambata", "Sambata"),
+        ("duminica", "Duminica"),
+    )
+
+    school = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True)
+    working_day = models.CharField(max_length=20, choices=DAYS)
+    start_hour = models.TimeField(null=False, blank=False)
+    end_hour = models.TimeField(null=False, blank=False)
+
+
+class DailySchoolSchedule(models.Model):
+    blocked_by = (
+        ("course", "Curs"),
+        ("make_up", "Make Up"),
+        ("other", "Other")
+    )
+    activity_type = (
+        ("online", "Online"),
+        ("sed", "Sediu"),
+    )
+    school_schedule = models.ForeignKey(SchoolSchedule, on_delete=models.CASCADE)
+    date = models.DateField(null=False, blank=False)
+    busy_from = models.TimeField(null=False, blank=False)
+    busy_to = models.TimeField(null=False, blank=False)
+    blocked_by = models.CharField(choices=blocked_by, null=False, blank=False, max_length=20)
+    activity_type = models.CharField(activity_type, null=False, blank=False)
+    room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True)
+    trainer_involved = models.ForeignKey(Trainer, on_delete=models.SET_NULL, null=True, blank=True)
 
 
 class Session(models.Model):
@@ -335,6 +371,7 @@ class SessionPresence(models.Model):
         ("absent", "Absent"),
         ("made_up_complete", "Made Up Complete"),
         ("made_up_setup", "Made Up Setup"),
+        ("made_up_absent", "Made Up Absent"),
     )
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     student = models.ForeignKey(Student, on_delete=models.SET_NULL, null=True, blank=True, related_name="student_presences")
@@ -359,6 +396,7 @@ class MakeUp(models.Model):
         null=True,
         blank=True)
     duration_in_minutes = models.SmallIntegerField(default=30)
+    classroom = models.ForeignKey(Room, models.SET_NULL, blank=True, null=True)
     trainer = models.ForeignKey(
         Trainer, on_delete=models.SET_NULL, null=True, blank=True)
     make_up_approved = models.BooleanField(default=False)
@@ -508,3 +546,14 @@ class News(models.Model):
     school = models.ForeignKey(School, on_delete=models.CASCADE)
     news_for_group = models.ForeignKey(CourseSchedule, null=True, blank=True, on_delete=models.SET_NULL)
     news_for_student = models.ForeignKey(Student, null=True, blank=True, on_delete=models.SET_NULL)
+
+
+class Feedback(models.Model):
+    FEEDBACK_FOR = (
+        ('trainer', 'Trainer'),
+        ('student', 'Student'),
+        ('school', 'School'),
+        ('course', 'Course')
+    )
+    feedback_for = models.CharField(null=False, blank=False, choices=FEEDBACK_FOR)
+    

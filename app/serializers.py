@@ -28,6 +28,10 @@ class SignInSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     username = serializers.CharField(write_only=True)
     token = serializers.HiddenField(default=None)
+    schools = serializers.SerializerMethodField(read_only=True)
+    role = serializers.SerializerMethodField(read_only=True)
+    user_id = serializers.SerializerMethodField(read_only=True)
+
 
     class Meta:
         model = User
@@ -35,6 +39,9 @@ class SignInSerializer(serializers.ModelSerializer):
             "username",
             "password",
             "token",
+            "schools",
+            "role",
+            "user_id",
         ]
 
     def validate(self, attrs: dict) -> dict:
@@ -64,6 +71,18 @@ class SignInSerializer(serializers.ModelSerializer):
         data.update({"is_reset_password_needed": user.is_reset_password_needed})
         return data
 
+    def get_schools(self, obj):
+        schools = obj.user_school.all()
+        resp_list = []
+        for school in schools:
+            resp_list.append({str(school.id): school.name})
+        return resp_list
+    
+    def get_role(self, obj):
+        return obj.role
+    
+    def get_user_id(self, obj):
+        return obj.id
 
 class ResetPasswordSerializer(serializers.Serializer):
     password = serializers.CharField()
@@ -158,16 +177,22 @@ class AbsencesSerializer(serializers.ModelSerializer):
 
     def get_trainer(self, obj):
         if obj.has_make_up_scheduled:
-            if obj.choosed_make_up_session_for_absence:
-                return obj.choosed_make_up_session_for_absence.trainer.__str__()
-            return obj.choosed_course_session_for_absence.session_trainer.__str__()
+            try:
+                if obj.choosed_make_up_session_for_absence:
+                    return obj.choosed_make_up_session_for_absence.trainer.__str__()
+                return obj.choosed_course_session_for_absence.session_trainer.__str__()
+            except:
+                pass
         return None
 
     def get_make_up_date_and_time(self, obj):
         if obj.has_make_up_scheduled:
-            if obj.choosed_make_up_session_for_absence:
-                return obj.choosed_make_up_session_for_absence.date_time
-            return f"{obj.choosed_course_session_for_absence.date} - {obj.choosed_course_session_for_absence.course_session.start_time}"  
+            try:
+                if obj.choosed_make_up_session_for_absence:
+                    return obj.choosed_make_up_session_for_absence.date_time
+                return f"{obj.choosed_course_session_for_absence.date} - {obj.choosed_course_session_for_absence.course_session.start_time}"  
+            except:
+                pass
         return None
 
     def get_make_up_session_for_absence(self, obj):

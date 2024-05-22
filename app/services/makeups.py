@@ -77,9 +77,9 @@ class MakeUpService:
             date_time__gte=datetime.now()
         )
         if type == "onl":
-            matching_sessions.filter(type="onl")
+            matching_sessions = matching_sessions.filter(type="onl")
         elif type == "sed":
-            matching_sessions.exclude(type="onl")
+            matching_sessions = matching_sessions.exclude(type="onl")
 
         for session in matching_sessions:
             if (

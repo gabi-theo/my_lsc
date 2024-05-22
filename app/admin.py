@@ -20,9 +20,13 @@ from .models import (
     Room,
     TrainerFromSchool,
     Parent,
+    DailySchoolSchedule,
+    SchoolSchedule,
 )
 
 # Register your models here.
+admin.site.register(DailySchoolSchedule)
+admin.site.register(SchoolSchedule)
 admin.site.register(School)
 admin.site.register(Course)
 admin.site.register(CourseDescription)

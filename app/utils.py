@@ -118,13 +118,12 @@ def create_serialized_response_from_object(object, fields):
     for field_name in fields:
         current_value = object
         for part in field_name.split('__'):
-            if part == "trainer":
+            if part == "trainer" or part == "session_trainer":
                 current_value = object.__str__()
             if isinstance(current_value, models.Model):
                 current_value = getattr(current_value, part, None)
             else:
                 current_value = None
                 break
-
         serialized_data[field_name] = current_value
     return serialized_data

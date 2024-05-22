@@ -1,4 +1,5 @@
 import json
+from django.db.models import Min, Max
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, status, mixins
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -7,11 +8,14 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from datetime import datetime, timedelta
+from itertools import groupby
+
 from my_lsc import settings
 
 from app.authentication import CookieJWTAuthentication
 from app.filters import AbsenceFilter
-from app.models import CourseSchedule
+from app.models import CourseSchedule, DailySchoolSchedule, Room, TrainerSchedule
 from app.permissions import IsCoordinator, IsTrainer
 from app.serializers import (
     AbsencesSerializer,
@@ -152,6 +156,66 @@ class CourseScheduleDetailView(generics.ListAPIView, generics.GenericAPIView):
         return CourseService.get_courses_from_school(school)
 
 
+class DailySchoolScheduleAPIView(APIView):
+    def get(self, request, format=None):
+        response = {"sed": {}, "onl": {}}
+        rooms = Room.objects.filter(school=self.request.user.user_school.first()).values_list('room_name', flat=True,)
+
+        for activity_type in ("sed", "onl"):
+            date = datetime(2024,2,1)
+            # date = datetime(year=2024, month=3, day=1)
+            for _ in range(0,30):
+                trainers = TrainerSchedule.objects.filter(school=self.request.user.user_school.first(), date=date)
+                # Filter DailySchoolSchedule for the given date and weekday
+                schedules = DailySchoolSchedule.objects.filter(
+                    school_schedule__school=self.request.user.user_school.first(),
+                    date=date,
+                ).order_by('activity_type', 'busy_from')
+                response[activity_type][str(date.date())] = {}
+ 
+            # for schedule in schedules:
+            #     for trainer in trainers:
+            #         if trainer.date == schedule.date:
+            #             print(trainer.date)
+                for trainer in trainers:
+                    intervals = response[activity_type][str(date.date())][f"{trainer.trainer.id}-{trainer.trainer.first_name}-{trainer.trainer.last_name}"] = {"busy": [], "free": [], "schedule":None}
+                    trainer_start = trainer.available_hour_from
+                    trainer_end = trainer.available_hour_to
+                    trainer_schedules = schedules.filter(trainer_involved=trainer.trainer).order_by('busy_from')
+                    last_interval_end_busy = None
+                    intervals["schedule"] = f"{trainer_start} - {trainer_end}"
+                    for schedule in trainer_schedules:
+                        if schedule.busy_from == trainer_start:
+                            # this is a busy interval
+                            intervals["busy"].append({"start": schedule.busy_from, "end": schedule.busy_to, "type": schedule.blocked_by})
+                        elif schedule.busy_from != trainer_start and len(intervals["free"]) == 0 and len(intervals["busy"]) == 0:
+                            intervals["free"].append({"start": trainer_start, "end": schedule.busy_from})
+                            intervals["busy"].append({"start": schedule.busy_from, "end": schedule.busy_to, "type": schedule.blocked_by})
+                        elif last_interval_end_busy == schedule.busy_from:
+                            # no break, intervals one after the other, extend busy interval
+                            intervals["busy"][-1] = {"start": intervals["busy"][-1]["start"], "end": schedule.busy_to, "type": schedule.blocked_by}
+                        elif last_interval_end_busy != schedule.busy_from:
+                            intervals["free"].append({"start": last_interval_end_busy, "end": schedule.busy_from})
+                            intervals["busy"].append({"start": schedule.busy_from, "end": schedule.busy_to, "type": schedule.blocked_by})
+                        last_interval_end_busy = schedule.busy_to
+                    if not last_interval_end_busy:
+                        last_interval_end_busy = trainer_start
+                    if last_interval_end_busy != trainer_end:
+                        intervals["free"].append({"start": last_interval_end_busy, "end": trainer_end})
+                date = date + timedelta(days=1)
+                
+                # elimineate free intervals shorter than 30 minutes
+                for interval_type in ("sed", "onl"):
+                    for date_intervals in response[interval_type]:
+                        for trainer_intervals in response[interval_type][date_intervals]:
+                            print(trainer_intervals)
+                            # for trainer_interval in trainer_intervals:
+                            #     print(trainer_interval)
+                            #     # filtered_intervals = [interval for interval in trainer_interval["free"] if interval["end"] - interval["start"] >= timedelta(minutes=30)]
+                            #     # trainer_interval["free"] = filtered_intervals
+        return Response(response)
+
+
 class CourseScheduleUpdate(generics.UpdateAPIView):
     queryset = CourseService.get_all_course_schedules()
     serializer_class = CourseScheduleSerializer
@@ -191,6 +255,7 @@ class CourseScheduleListView(generics.ListAPIView):
 
 class MakeUpChooseView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
+        # TODO: IMPLEMENT 30 MINS MAKE-UPS
         session = None
         make_up = None
         absence = AbsenceService.get_absence_by_id(self.kwargs['absence_id'])
@@ -216,8 +281,8 @@ class MakeUpSessionsAvailableView(mixins.CreateModelMixin, generics.GenericAPIVi
     serializer_class = MakeUpSerializer
 
     def get(self, request, *args, **kwargs):
-        make_up_type = request.GET.get('make_up_type') # onl, sed, any
-        absence_id = request.GET.get('absence_id')
+        make_up_type = self.kwargs.get('make_up_type') # onl, sed, any
+        absence_id = self.kwargs.get('absence_id')
         absence = AbsenceService.get_absence_by_id(absence_id)
         if request.user.is_anonymous:
             school = absence.absent_on_session.course_session.school
@@ -259,7 +324,6 @@ class MakeUpSessionsAvailableView(mixins.CreateModelMixin, generics.GenericAPIVi
                 absence, school, type=make_up_type)
             make_up_options["sed"]["courses"] = make_up_options["onl"]["courses"] =  SessionService.get_next_sessions_for_absence(
                 absence, school, make_up_type)
-        print(make_up_options)
         return Response(make_up_options, status=status.HTTP_200_OK)
 
     def create(self, request, *args, **kwargs):

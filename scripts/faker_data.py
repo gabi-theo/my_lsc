@@ -1,18 +1,57 @@
 import uuid
 import random
+from time import sleep
 from faker import Faker
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
+from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth import get_user_model
 from app.models import (
-    School, Room, DaysOff, CourseDays, Course, Trainer, TrainerFromSchool,
+    DailySchoolSchedule, School, Room, DaysOff, CourseDays, Course, SchoolSchedule, Trainer, TrainerFromSchool,
     Parent, Student, CourseSchedule, StudentCourseSchedule, TrainerSchedule,
     Session, SessionPresence, MakeUp, AbsentStudent, CourseDescription,
     SessionsDescription, SentWhatsappMessages, SentEmailsMessages,
     StudentInvoice, Invoice
 )
-
+n = 0
 fake = Faker()
 User = get_user_model()
+
+
+def random_date(start_datetime: datetime, end_datetime: datetime, start_hour=14, end_hour=19):
+    # Generate a random date within the interval
+    delta_days = (end_datetime - start_datetime).days
+    random_days = random.randint(0, delta_days)
+    random_date = start_datetime + timedelta(days=random_days)
+
+    # Generate a random time between 14:00 and 19:00 with minutes divisible by 15
+    random_hour = random.randint(start_hour, end_hour)
+    random_minute = random.choice([0, 15, 30, 45])
+
+    # Combine random date and time
+    random_date_time = datetime(
+        random_date.year, 
+        random_date.month, 
+        random_date.day, 
+        random_hour, 
+        random_minute
+    )
+    return random_date_time
+
+def random_time(start_hour, end_hour):
+    sleep(0.1)
+    # Generate random hour
+    hour = random.randint(start_hour, end_hour)
+    
+    # Generate random minute (either 0 or 30)
+    minute = random.choice([0, 30])
+    
+    # Get current date
+    current_date = datetime.now().date()
+    
+    # Construct datetime object with random hour and minute
+    random_datetime = datetime.combine(current_date, datetime.min.time()) + timedelta(hours=hour, minutes=minute)
+    
+    return random_datetime.time()
 
 
 # Function to create fake data for the models
@@ -58,8 +97,8 @@ def generate_fake_data():
             )
 
     # Create course days
-    for _ in range(7):
-        CourseDays.objects.create(day=random.choice(['luni', 'marti', 'miercuri', 'joi', 'vineri', 'sambata', 'duminica']))
+    for day in ['luni', 'marti', 'miercuri', 'joi', 'vineri', 'sambata', 'duminica']:
+        CourseDays.objects.create(day=day)
 
     # Create courses
     courses = []
@@ -71,7 +110,7 @@ def generate_fake_data():
 
     # Create trainers
     trainers = []
-    for _ in range(5):
+    for _ in range(20):
         trainer = Trainer.objects.create(
             user=User.objects.create_user(
                 username=fake.user_name(),
@@ -86,17 +125,31 @@ def generate_fake_data():
 
     # Create trainers from school
     for school in schools:
-        for trainer in random.sample(trainers, random.randint(2, 4)):
+        for trainer in random.sample(trainers, random.randint(4, 7)):
             TrainerFromSchool.objects.create(school=school, trainer=trainer)
+
+            # Create trainer schedules
+            start_date = datetime(2024, 1, 1)
+            end_date = datetime(2024, 6, 30)
+            dates = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
+
+            for date in dates:
+                TrainerSchedule.objects.create(
+                    year=2024,
+                    week=date.isocalendar().week,
+                    date=datetime(year=2024,month=date.month,day=date.day),
+                    trainer=trainer,
+                    available_day=random.choice(CourseDays.objects.all()),
+                    available_hour_from=datetime(year=2024,month=date.month,day=1, hour=9, minute=0).time(),
+                    available_hour_to=datetime(year=2024,month=date.month,day=1, hour=21, minute=0).time(),
+                    online_only=fake.boolean(),
+                    school=school,
+                )
 
     # Create parents
     parents = []
     for _ in range(5):
         parent = Parent.objects.create(
-            user=User.objects.create_user(
-                username=fake.user_name(),
-                password=fake.password(),
-            ),
             school=random.choice(schools),
             first_name=fake.first_name(),
             last_name=fake.last_name(),
@@ -111,82 +164,77 @@ def generate_fake_data():
     # Create students
     students = []
     for parent in parents:
-        for _ in range(random.randint(1, 3)):
-            student = Student.objects.create(
-                parent=parent,
-                first_name=fake.first_name(),
-                last_name=fake.last_name(),
-            )
+        for _ in range(random.randint(100, 150)):
+            username = fake.user_name()
+            retry = True
+            while retry:
+                try:
+                    student = Student.objects.create(
+                        user=User.objects.create_user(
+                            username=username,
+                            password=fake.password(),
+                        ),
+                        parent=parent,
+                        first_name=fake.first_name(),
+                        last_name=fake.last_name(),
+                    )
+                    retry = False
+                except Exception as e:
+                    retry = True
+                    username += "1"
             students.append(student)
 
     # Create course schedules
     for school in schools:
         for course in courses:
             for _ in range(2):
+                course_type = random.choice(['onl', 'hbr', 'sed'])
+                start_time = random_time(14, 19)
                 course_schedule = CourseSchedule.objects.create(
                     course=course,
                     school=school,
                     group_name=fake.word(),
-                    total_sessions=random.randint(5, 10),
-                    first_day_of_session=fake.date_between(start_date='-30d', end_date='+30d'),
-                    last_day_of_session=fake.date_between(start_date='+31d', end_date='+60d'),
+                    total_sessions=random.randint(15, 18),
+                    # first_day_of_session=fake.date_between(start_date='-30d', end_date='+30d'),
+                    # last_day_of_session=fake.date_between(start_date='+31d', end_date='+60d'),
+                    first_day_of_session=datetime(year=2024, month=1, day=15),
+                    last_day_of_session=datetime(year=2024, month=6, day=30),
                     day=random.choice(['luni', 'marti', 'miercuri', 'joi', 'vineri', 'sambata', 'duminica']),
-                    start_time=fake.time(),
-                    end_time=fake.time(),
-                    classroom=random.choice(rooms),
+                    start_time=start_time,
+                    end_time=(datetime.combine(datetime.today(), start_time) + timedelta(0,90*60)).time(),
                     default_trainer=random.choice(trainers),
-                    course_type=random.choice(['onl', 'hbr', 'sed']),
+                    course_type=course_type,
+                    classroom=random.choice(rooms) if course_type in ["hbr", "sed"] else None,
                     online_link=fake.url(),
                     can_be_used_as_online_make_up_for_other_schools=fake.boolean(),
                     available_places_for_make_up_online=random.randint(1, 5),
                     available_places_for_make_up_on_site=random.randint(1, 5),
                 )
-
-                for student in random.sample(students, random.randint(5, 8)):
+                for student in random.sample(students, random.randint(4, 12)):
                     StudentCourseSchedule.objects.create(student=student, course_schedule=course_schedule)
 
-    # Create trainer schedules
-    for trainer in trainers:
-        for _ in range(5):
-            TrainerSchedule.objects.create(
-                year=fake.year(),
-                week=fake.random_int(min=1, max=52),
-                date=fake.date_between(start_date='-30d', end_date='+30d'),
-                trainer=trainer,
-                available_day=random.choice(CourseDays.objects.all()),
-                available_hour_from=fake.time(),
-                available_hour_to=fake.time(),
-                online_only=fake.boolean(),
-                is_available=fake.boolean(),
-                school=random.choice(schools),
-            )
-
-    # Create sessions
-    for course_schedule in CourseSchedule.objects.all():
-        for session_no in range(1, course_schedule.total_sessions + 1):
-            Session.objects.create(
-                course_session=course_schedule,
-                session_trainer=random.choice(trainers),
-                session_passed=fake.boolean(),
-                date=fake.date_between_dates(course_schedule.first_day_of_session, course_schedule.last_day_of_session),
-                session_no=session_no,
-            )
 
     # Create session presences
     for session in Session.objects.all():
+        absent_students = []
         for student in session.course_session.students.all():
-            SessionPresence.objects.create(student=student, session=session, status=random.choice(['present', 'absent', 'made_up']))
+            status=random.choice(['present', 'absent', 'made_up'])
+            if status != "present":
+                absent_students.append((student, session, status))
+            SessionPresence.objects.create(student=student, session=session, status=status)
 
     # Create make-ups
     for session_presence in SessionPresence.objects.filter(status='absent'):
-        MakeUp.objects.create(
-            date_time=fake.date_time_between(start_date=session_presence.session.date, end_date=session_presence.session.date),
+        mu_type = random.choice(['onl', 'hbr', 'sed'])
+        makeup = MakeUp.objects.create(
+            date_time=random_date(datetime(2024,1,15, 14, 0), datetime(2024,6,30, 20, 0)),
             online_link=fake.url(),
-            type=random.choice(['onl', 'hbr', 'sed']),
-            duration_in_minutes=random.randint(30, 120),
+            type=mu_type,
+            duration_in_minutes=30,
             trainer=random.choice(trainers),
             make_up_approved=fake.boolean(),
             make_up_completed=fake.boolean(),
+            classroom=random.choice(rooms) if mu_type in ["hbr", "sed"] else None,
             can_be_used_as_online_make_up_for_other_schools=fake.boolean(),
             available_places_for_make_up_online=random.randint(1, 5),
             available_places_for_make_up_on_site=random.randint(1, 5),
@@ -194,23 +242,23 @@ def generate_fake_data():
         )
 
     # Create absent students
-    for student in students:
-        for absent_session in Session.objects.all():
-            absent_course_schedule = absent_session.course_session
-            AbsentStudent.objects.create(
-                absent_participant=student,
-                absent_on_session=absent_session,
-                is_absence_in_crm=fake.boolean(),
-                is_absence_communicated_to_parent=fake.boolean(),
-                is_absence_completed=fake.boolean(),
-                is_absent_for_absence=fake.boolean(),
-                has_make_up_scheduled=fake.boolean(),
-                choosed_course_session_for_absence=absent_session,
-                choosed_make_up_session_for_absence=MakeUp.objects.filter(session=absent_session).first(),
-                is_make_up_online=fake.boolean(),
-                is_make_up_on_site=fake.boolean(),
-                comment=fake.text(),
-            )
+    for student in absent_students:
+        absent_course_schedule = student[1].course_session
+        AbsentStudent.objects.create(
+            absent_participant=student[0],
+            absent_on_session=student[1],
+            is_absence_in_crm=fake.boolean(),
+            is_absence_communicated_to_parent=fake.boolean(),
+            is_absence_completed=fake.boolean(),
+            is_absent_for_absence=fake.boolean(),
+            has_make_up_scheduled=fake.boolean(),
+            choosed_course_session_for_absence=student[1],
+            choosed_make_up_session_for_absence=MakeUp.objects.filter(session=student[1]).first(),
+            is_make_up_online=fake.boolean(),
+            is_make_up_on_site=fake.boolean(),
+            comment=fake.text(),
+        )
+
 
     # Create course descriptions
     for course in courses:

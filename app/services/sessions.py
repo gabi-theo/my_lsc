@@ -66,7 +66,6 @@ class SessionService:
             course_session__course = absence_session.course_session.course,
             date__gte=datetime.now()
         ).exclude(id=absence_session.id).order_by("date")
-
         school_sessions = matching_sessions.filter(
             course_session__school=school,
         )
@@ -81,13 +80,30 @@ class SessionService:
                 ):
                     available_sessions.append(
                         create_serialized_response_from_object(object=session, fields=fields_to_include_for_serializer))
-        for session in school_sessions:
-            if (
-                session.course_session_absence.all().count() <
-                session.course_session.available_places_for_make_up_online or 
-                session.course_session_absence.all().count() <
-                session.course_session.available_places_for_make_up_on_site
-            ):
-                available_sessions.append(
-                    create_serialized_response_from_object(object=session, fields=fields_to_include_for_serializer))
+        if type == "any":
+            for session in school_sessions:
+                if (
+                    session.course_session_absence.all().count() <
+                    session.course_session.available_places_for_make_up_online or 
+                    session.course_session_absence.all().count() <
+                    session.course_session.available_places_for_make_up_on_site
+                ):
+                    available_sessions.append(
+                        create_serialized_response_from_object(object=session, fields=fields_to_include_for_serializer))
+        elif type == "sed":
+            for session in school_sessions:
+                if ( 
+                    session.course_session_absence.all().count() <
+                    session.course_session.available_places_for_make_up_on_site
+                ):
+                    available_sessions.append(
+                        create_serialized_response_from_object(object=session, fields=fields_to_include_for_serializer))
+        else:
+            for session in school_sessions:
+                if ( 
+                    session.course_session_absence.all().count() <
+                    session.course_session.available_places_for_make_up_online
+                ):
+                    available_sessions.append(
+                        create_serialized_response_from_object(object=session, fields=fields_to_include_for_serializer))
         return available_sessions
