@@ -164,15 +164,20 @@ def generate_fake_data():
     # Create students
     students = []
     for parent in parents:
-        for _ in range(random.randint(100, 150)):
+        for i in range(random.randint(100, 150)):
             username = fake.user_name()
+            password = fake.password()
+            if i == 1:
+                username = "stud1"
+                password = "stud1"
+            
             retry = True
             while retry:
                 try:
                     student = Student.objects.create(
                         user=User.objects.create_user(
                             username=username,
-                            password=fake.password(),
+                            password=password,
                         ),
                         parent=parent,
                         first_name=fake.first_name(),
