@@ -31,6 +31,8 @@ class SignInSerializer(serializers.ModelSerializer):
     schools = serializers.SerializerMethodField(read_only=True)
     role = serializers.SerializerMethodField(read_only=True)
     user_id = serializers.SerializerMethodField(read_only=True)
+    student_ids = serializers.SerializerMethodField(read_only=True)
+    trainer_id = serializers.SerializerMethodField(read_only=True)
 
 
     class Meta:
@@ -42,6 +44,8 @@ class SignInSerializer(serializers.ModelSerializer):
             "schools",
             "role",
             "user_id",
+            "student_ids",
+            "trainer_id",
         ]
 
     def validate(self, attrs: dict) -> dict:
@@ -83,6 +87,23 @@ class SignInSerializer(serializers.ModelSerializer):
     
     def get_user_id(self, obj):
         return obj.id
+    
+    def get_student_ids(self, obj):
+        try:
+            parent = obj.parent_user
+            if parent:
+                students = parent.children.all()
+                return [f"{student.id}_{student.first_name}_{student.last_name}" for student in students]
+        except Exception:
+            return None
+
+    def get_trainer_id(self, obj):
+        try:
+            trainer = obj.trainer_user
+            if trainer:
+                return trainer.id
+        except Exception:
+            return None
 
 class ResetPasswordSerializer(serializers.Serializer):
     password = serializers.CharField()

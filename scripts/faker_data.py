@@ -148,8 +148,25 @@ def generate_fake_data():
 
     # Create parents
     parents = []
-    for _ in range(5):
+    for i in range(random.randint(100,150)):
+        username = fake.user_name()
+        password = fake.password()
+        exists = True
+        if i == 1:
+            username = "stud1"
+            password = "stud1"
+        user = User.objects.filter(username=username, password=password)
+        while user.exists():
+            username = fake.user_name()
+            password = fake.password()
+            user = User.objects.filter(username=username, password=password)
+        
         parent = Parent.objects.create(
+            user=User.objects.create_user(
+                            username=username,
+                            password=password,
+                            role="student",
+                        ),
             school=random.choice(schools),
             first_name=fake.first_name(),
             last_name=fake.last_name(),
@@ -164,29 +181,12 @@ def generate_fake_data():
     # Create students
     students = []
     for parent in parents:
-        for i in range(random.randint(100, 150)):
-            username = fake.user_name()
-            password = fake.password()
-            if i == 1:
-                username = "stud1"
-                password = "stud1"
-            
-            retry = True
-            while retry:
-                try:
-                    student = Student.objects.create(
-                        user=User.objects.create_user(
-                            username=username,
-                            password=password,
-                        ),
-                        parent=parent,
-                        first_name=fake.first_name(),
-                        last_name=fake.last_name(),
-                    )
-                    retry = False
-                except Exception as e:
-                    retry = True
-                    username += "1"
+        for i in range(random.randint(1, 3)):
+            student = Student.objects.create(
+                parent=parent,
+                first_name=fake.first_name(),
+                last_name=fake.last_name(),
+            )
             students.append(student)
 
     # Create course schedules

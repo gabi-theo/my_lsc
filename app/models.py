@@ -158,7 +158,7 @@ class Course(models.Model):
 class Trainer(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(
-        User, on_delete=models.CASCADE, null=True)
+        User, on_delete=models.CASCADE, null=True, related_name="trainer_user")
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)
     phone_contact = models.CharField(max_length=50)
@@ -184,6 +184,8 @@ class Parent(models.Model):
         blank=False,
         related_name="school_students",
     )
+    user = models.OneToOneField(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="parent_user")
     first_name = models.CharField(
         max_length=50, null=False, blank=False)
     last_name = models.CharField(
@@ -202,8 +204,6 @@ class Parent(models.Model):
 
 class Student(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.OneToOneField(
-        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="student_user")
     parent = models.ForeignKey(Parent, on_delete=models.CASCADE, related_name="children")
     first_name = models.CharField(max_length=50, null=False, blank=False)
     last_name = models.CharField(max_length=50, null=False, blank=False)
