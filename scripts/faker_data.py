@@ -221,13 +221,14 @@ def generate_fake_data():
 
 
     # Create session presences
+    absent_students = []
     for session in Session.objects.all():
-        absent_students = []
         for student in session.course_session.students.all():
             status=random.choice(['present', 'absent', 'made_up'])
             if status != "present":
                 absent_students.append((student, session, status))
             SessionPresence.objects.create(student=student, session=session, status=status)
+    print(f"Total absent students: {len(absent_students)}")
 
     # Create make-ups
     for session_presence in SessionPresence.objects.filter(status='absent'):
@@ -250,7 +251,6 @@ def generate_fake_data():
     # Create absent students
     for student in absent_students:
         absent_course_schedule = student[1].course_session
-        print(f"Creating absence for student {student[0]} on session {student[1]} with status {student[2]}")
         AbsentStudent.objects.create(
             absent_participant=student[0],
             absent_on_session=student[1],
