@@ -15,7 +15,7 @@ from my_lsc import settings
 
 from app.authentication import CookieJWTAuthentication
 from app.filters import AbsenceFilter
-from app.models import CourseSchedule, DailySchoolSchedule, Room, TrainerSchedule
+from app.models import CourseSchedule, DailySchoolSchedule, Room, SessionPresence, TrainerSchedule
 from app.permissions import IsCoordinator, IsTrainer
 from app.serializers import (
     AbsencesSerializer,
@@ -47,6 +47,7 @@ from app.services.trainers import TrainerService
 from app.services.users import UserService
 from app.utils import (
     check_excel_format_in_request_data,
+    find_busy_intervals,
 )
 
 ########################################## AUTH VIEW
@@ -160,6 +161,7 @@ class DailySchoolScheduleAPIView(APIView):
     def get(self, request, format=None):
         response = {"sed": {}, "onl": {}}
         rooms = Room.objects.filter(school=self.request.user.user_school.first()).values_list('room_name', flat=True,)
+        room_count = rooms.count()
 
         for activity_type in ("sed", "onl"):
             date = datetime(2024,2,1)
@@ -208,11 +210,23 @@ class DailySchoolScheduleAPIView(APIView):
                 for interval_type in ("sed", "onl"):
                     for date_intervals in response[interval_type]:
                         for trainer_intervals in response[interval_type][date_intervals]:
-                            print(trainer_intervals)
-                            # for trainer_interval in trainer_intervals:
-                            #     print(trainer_interval)
-                            #     # filtered_intervals = [interval for interval in trainer_interval["free"] if interval["end"] - interval["start"] >= timedelta(minutes=30)]
-                            #     # trainer_interval["free"] = filtered_intervals
+                            trainer_interval = response[interval_type][date_intervals][trainer_intervals]
+                            filtered_intervals = [interval for interval in trainer_interval["free"] if (datetime.combine(datetime.today(), interval["end"]) - datetime.combine(datetime.today(), interval["start"]) >= timedelta(minutes=30))]
+                            trainer_interval["free"] = filtered_intervals
+                
+                # eliminate intervals that cannot happen due to busy rooms
+                # TODO: test this functionality as fake data don't provide enough data for this to be tested
+                for interval_type in ("sed", "onl"):
+                    if interval_type == "sed":
+                        for date_intervals in response[interval_type]:
+                            for trainer_intervals in response[interval_type][date_intervals]:
+                                trainer_interval = response[interval_type][date_intervals][trainer_intervals]
+                                for interval in trainer_interval["free"]:
+                                    interval_schedules = schedules.filter(busy_from__gte=interval["start"], busy_to__lte=interval["end"], activity_type="sed").order_by('busy_from')
+                                    rooms_intervals = list(interval_schedules.values_list("room", "busy_from", "busy_to"))
+                                    busy_intervals = find_busy_intervals(rooms_intervals, room_count)
+                                    if busy_intervals:
+                                        print(busy_intervals)
         return Response(response)
 
 
@@ -498,6 +512,38 @@ class StudentCourseScheduleView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         except CourseSchedule.DoesNotExist:
             return Response({"error": "Student not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class StudentCoursesAndAbsentStatus(APIView):
+    permission_classes = [AllowAny]
+    def get(self, request, student_id):
+        student_courses = CourseSchedule.objects.filter(students__id=student_id)
+        resp = []
+        for course in student_courses:
+            student_sessions_in_course = []
+            for session in course.sessions.all():
+                absence = AbsenceService.get_absence_by_missed_session_id_and_student_id(session_id=session.id, student_id=student_id)
+                print(session.id)
+                print(student_id)
+                print(absence)
+                presence_status = SessionPresence.objects.filter(student__id=student_id, session=session)
+                student_sessions_in_course.append({
+                    "session_id": session.id,
+                    "session_date": session.date,
+                    "session_number": session.session_no,
+                    "presence_status": presence_status.first().status if presence_status.exists() else None,
+                    "absence_id": absence.id if absence else None,
+                })
+
+            resp.append(
+                {
+                    "course_schedule_id": course.id,
+                    "course_schedule_name": course.group_name,
+                    "sessions": student_sessions_in_course
+                }
+            )
+
+        return Response(resp, status=status.HTTP_200_OK)
 
 
 class StudentAbsentView(APIView):

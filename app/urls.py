@@ -24,6 +24,7 @@ from app.views import (
     SignOutView,
     StudentAbsentView,
     StudentCourseScheduleView,
+    StudentCoursesAndAbsentStatus,
     StudentMakeUpAbsentView,
     StudentPresenceView,
     StudentSessionAbsentView,
@@ -72,6 +73,7 @@ urlpatterns = [
 
     ################################ STUDENTS ENDPOINTS
     path("absent_students/", AbsentStudentsView.as_view()),
+    path("student_courses_and_sessions_status/<uuid:student_id>/", StudentCoursesAndAbsentStatus.as_view()),
     path("get_student_by_email_or_phone/<str:email>/<str:phone>/", GetStudentByMailOrPhoneView.as_view()),
     path("students_presence/<uuid:student_id>/<uuid:course_schedule_id>/", StudentPresenceView.as_view()),
     path('student_courses/<str:student_id>/', StudentCourseScheduleView.as_view()),

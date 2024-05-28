@@ -191,6 +191,7 @@ def generate_fake_data():
 
     # Create course schedules
     for school in schools:
+        trainers_from_school = TrainerFromSchool.objects.filter(school=school).order_by("?").first()
         for course in courses:
             for _ in range(2):
                 course_type = random.choice(['onl', 'hbr', 'sed'])
@@ -207,7 +208,7 @@ def generate_fake_data():
                     day=random.choice(['luni', 'marti', 'miercuri', 'joi', 'vineri', 'sambata', 'duminica']),
                     start_time=start_time,
                     end_time=(datetime.combine(datetime.today(), start_time) + timedelta(0,90*60)).time(),
-                    default_trainer=random.choice(trainers),
+                    default_trainer=trainers_from_school.trainer,
                     course_type=course_type,
                     classroom=random.choice(rooms) if course_type in ["hbr", "sed"] else None,
                     online_link=fake.url(),
@@ -249,6 +250,7 @@ def generate_fake_data():
     # Create absent students
     for student in absent_students:
         absent_course_schedule = student[1].course_session
+        print(f"Creating absence for student {student[0]} on session {student[1]} with status {student[2]}")
         AbsentStudent.objects.create(
             absent_participant=student[0],
             absent_on_session=student[1],

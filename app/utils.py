@@ -127,3 +127,24 @@ def create_serialized_response_from_object(object, fields):
                 break
         serialized_data[field_name] = current_value
     return serialized_data
+
+
+def find_busy_intervals(intervals, rooms_number, gap=timedelta(minutes=30)):
+    busy_intervals = []
+    current_intervals = []
+
+    for room, start, end in intervals:
+        # Remove intervals that are not overlapping with the current one
+        current_intervals = [(r, s, e) for r, s, e in current_intervals if datetime.combine(datetime.today(), e) + gap > datetime.combine(datetime.today(), start)]
+
+        # Add current interval
+        current_intervals.append((room, start, end))
+
+        # Check if all rooms are busy
+        if len(current_intervals) == rooms_number:
+            busy_start = max(s for r, s, e in current_intervals)
+            busy_end = min(e for r, s, e in current_intervals)
+            if busy_end > busy_start:
+                busy_intervals.append((busy_start, busy_end))
+
+    return busy_intervals
