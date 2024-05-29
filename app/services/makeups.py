@@ -13,6 +13,7 @@ from app.utils import (
     get_date_of_day_in_same_week,
     create_serialized_response_from_object,
 )
+from my_lsc import settings
 
 
 class MakeUpService:
@@ -70,11 +71,15 @@ class MakeUpService:
             "session__course_session__school__name",
             "online_link"]
         absence_session = absence.absent_on_session
+        if settings.DEBUG:
+            course_date = datetime(2024, 2, 1, 12, 0)
+        else:
+            course_date = datetime.now()
         matching_sessions = MakeUp.objects.filter(
             session__session_no=absence_session.session_no,
             session__course_session__course = absence_session.course_session.course,
             session__course_session__school=school,
-            date_time__gte=datetime.now()
+            date_time__gte=course_date
         )
         if type == "onl":
             matching_sessions = matching_sessions.filter(type="onl")
@@ -191,11 +196,11 @@ class MakeUpService:
         if trainers_that_are_free_30_minutes_before.exists():
             make_up_possible_before_session = True
             for trainer in trainers_that_are_free_30_minutes_before:
-                available_trainers_before[trainer.id] = trainer.__str__()
+                available_trainers_before[str(trainer.id)] = f"{trainer.trainer.first_name} {trainer.trainer.last_name}"
         if trainers_that_are_free_30_minutes_after.exists():
             make_up_possible_after_session = True
             for trainer in trainers_that_are_free_30_minutes_after:
-                available_trainers_after[trainer.id] = trainer.__str__()
+                available_trainers_after[str(trainer.id)] = f"{trainer.trainer.first_name} {trainer.trainer.last_name}"
 
         return {
             "make_up_possible_before_session": {

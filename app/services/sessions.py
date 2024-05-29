@@ -4,6 +4,7 @@ from rest_framework.response import Response
 
 from app.models import Session, SessionPresence, Trainer
 from app.utils import create_serialized_response_from_object
+from my_lsc import settings
 
 
 class SessionService:
@@ -60,11 +61,14 @@ class SessionService:
             "course_session__available_places_for_make_up_online",
             "course_session__available_places_for_make_up_on_site"]
         absence_session = absence.absent_on_session
-
+        if settings.DEBUG:
+            course_date = datetime(2024, 2, 1, 12, 0)
+        else:
+            course_date = datetime.now()
         matching_sessions = Session.objects.filter(
             session_no=absence_session.session_no,
             course_session__course = absence_session.course_session.course,
-            date__gte=datetime.now()
+            date__gte=course_date
         ).exclude(id=absence_session.id).order_by("date")
         school_sessions = matching_sessions.filter(
             course_session__school=school,
@@ -80,19 +84,13 @@ class SessionService:
                 ):
                     available_sessions.append(
                         create_serialized_response_from_object(object=session, fields=fields_to_include_for_serializer))
-        if type == "any":
+        if type == "sed":
             for session in school_sessions:
+                if settings.DEBUG:
+                    # with fake data, temporarly increase available make up places available for a course
+                    # TODO: disable for real data
+                    session.course_session.available_places_for_make_up_on_site = session.course_session_absence.all().count() + 1
                 if (
-                    session.course_session_absence.all().count() <
-                    session.course_session.available_places_for_make_up_online or 
-                    session.course_session_absence.all().count() <
-                    session.course_session.available_places_for_make_up_on_site
-                ):
-                    available_sessions.append(
-                        create_serialized_response_from_object(object=session, fields=fields_to_include_for_serializer))
-        elif type == "sed":
-            for session in school_sessions:
-                if ( 
                     session.course_session_absence.all().count() <
                     session.course_session.available_places_for_make_up_on_site
                 ):
@@ -100,7 +98,11 @@ class SessionService:
                         create_serialized_response_from_object(object=session, fields=fields_to_include_for_serializer))
         else:
             for session in school_sessions:
-                if ( 
+                if settings.DEBUG:
+                    # with fake data, temporarly increase available make up places available for a course
+                    # TODO: disable for real data
+                    session.course_session.available_places_for_make_up_online = session.course_session_absence.all().count() + 1
+                if (
                     session.course_session_absence.all().count() <
                     session.course_session.available_places_for_make_up_online
                 ):
