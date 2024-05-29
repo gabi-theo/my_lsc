@@ -57,7 +57,7 @@ urlpatterns = [
     path("course_schedule_details/", CourseScheduleDetailView.as_view()),
     path("course_sessions/<uuid:pk>/",SessionInfoList.as_view()),
     path("course_excel_upload/", UploadCourseExcelView.as_view()),
-    path("get_available_make_ups/<uuid:school_id>/<uuid:absence_id>/<str:make_up_type>", MakeUpSessionsAvailableView.as_view()),
+    path("get_available_make_ups/<uuid:school_id>/<uuid:absence_id>/<str:make_up_type>/", MakeUpSessionsAvailableView.as_view()),
     path("sessions_from_course/<uuid:pk>/", SessionCourseListView.as_view()),
     path("make_up_choose/<str:absence_id>/<str:session_option>/<str:make_up_option>/<str:mins_option_30>/<str:send_email>/", MakeUpChooseView.as_view()),
     path("make_up_from_trainer_schedule/", MakeUpTrainerScheduleView.as_view()),
