@@ -158,27 +158,28 @@ class CourseScheduleDetailView(generics.ListAPIView, generics.GenericAPIView):
 
 
 class DailySchoolScheduleAPIView(APIView):
-    def get(self, request, format=None):
+    def get(self, request, format=None, *args, **kwargs):
         response = {"sed": {}, "onl": {}}
         rooms = Room.objects.filter(school=self.request.user.user_school.first()).values_list('room_name', flat=True,)
         room_count = rooms.count()
-
+        school_id = self.kwargs.get('school_id')
+        school = School.objects.get(pk=school_id)
         for activity_type in ("sed", "onl"):
             date = datetime(2024,2,1)
             # date = datetime(year=2024, month=3, day=1)
             for _ in range(0,30):
-                trainers = TrainerSchedule.objects.filter(school=self.request.user.user_school.first(), date=date)
                 # Filter DailySchoolSchedule for the given date and weekday
-                schedules = DailySchoolSchedule.objects.filter(
-                    school_schedule__school=self.request.user.user_school.first(),
-                    date=date,
-                ).order_by('activity_type', 'busy_from')
                 response[activity_type][str(date.date())] = {}
  
             # for schedule in schedules:
             #     for trainer in trainers:
             #         if trainer.date == schedule.date:
             #             print(trainer.date)
+                trainers = TrainerSchedule.objects.filter(school=school, date=date)
+                schedules = DailySchoolSchedule.objects.filter(
+                    school_schedule__school=school,
+                    date=date,
+                ).order_by('activity_type', 'busy_from')
                 for trainer in trainers:
                     intervals = response[activity_type][str(date.date())][f"{trainer.trainer.id}-{trainer.trainer.first_name}-{trainer.trainer.last_name}"] = {"busy": [], "free": [], "schedule":None}
                     trainer_start = trainer.available_hour_from
@@ -205,7 +206,7 @@ class DailySchoolScheduleAPIView(APIView):
                     if last_interval_end_busy != trainer_end:
                         intervals["free"].append({"start": last_interval_end_busy, "end": trainer_end})
                 date = date + timedelta(days=1)
-                
+
                 # elimineate free intervals shorter than 30 minutes
                 for interval_type in ("sed", "onl"):
                     for date_intervals in response[interval_type]:

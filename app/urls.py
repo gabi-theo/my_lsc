@@ -49,7 +49,7 @@ urlpatterns = [
     path("rooms/", RoomListCreateView.as_view()),
     path("school_create/", SchoolCreateView.as_view()),
     path("news/", NewsView.as_view()),
-    path("school_schedules/", DailySchoolScheduleAPIView.as_view()),
+    path("school_schedules/<uuid:school_id>/", DailySchoolScheduleAPIView.as_view()),
 
     ################################ COURSES AND SESSIONS ENDPOINTS
     path("course_schedule/", CourseScheduleListView.as_view()),
