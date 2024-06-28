@@ -15,6 +15,7 @@ from app.utils import (
     create_serialized_response_from_object,
 )
 from my_lsc import settings
+from app.models import *
 
 
 class MakeUpService:
@@ -311,3 +312,19 @@ class MakeUpService:
         elif make_up_type == "sed":
             options["30_mins"] = MakeUpService.is_make_up_possible_sed_before_or_after_class_for_absence(absence, school)
         return options
+    
+    @staticmethod
+    def get_school(self, request, absence, school_id):
+        if school_id:
+            return School.objects.get(pk=school_id)
+
+        if request.user.is_anonymous:
+            return absence.absent_on_session.course_session.school
+
+        if request.user.role == "stud":
+            return request.user.parent_user.school.first()
+        elif request.user.role == "coordinator":
+            return request.user.user_school.first()
+        else:
+            trainer = request.user.trainer_user
+            return TrainerFromSchool.objects.filter(trainer=trainer).schools.first()

@@ -295,22 +295,6 @@ class MakeUpSessionsAvailableView(mixins.CreateModelMixin, generics.GenericAPIVi
     permission_classes = [AllowAny]
     serializer_class = MakeUpSerializer
     
-    def get_school(self, request, absence, school_id):
-        if school_id:
-            return School.objects.get(pk=school_id)
-
-        if request.user.is_anonymous:
-            return absence.absent_on_session.course_session.school
-
-        if request.user.role == "stud":
-            return request.user.parent_user.school.first()
-        elif request.user.role == "coordinator":
-            return request.user.user_school.first()
-        else:
-            trainer = request.user.trainer_user
-            return TrainerFromSchool.objects.filter(trainer=trainer).schools.first()
-
-    
 
     def get(self, request, *args, **kwargs):
         make_up_type = self.kwargs.get('make_up_type') # onl, sed, any
@@ -319,7 +303,7 @@ class MakeUpSessionsAvailableView(mixins.CreateModelMixin, generics.GenericAPIVi
         
         try:
             absence = AbsenceService.get_absence_by_id(absence_id)
-            school = self.get_school(request, absence, school_id)
+            school = MakeUpService.get_school(request, absence, school_id)
         except absence.DoesNotExist:
             return Response({'error': 'Absence not found'}, status=status.HTTP_404_NOT_FOUND)
         except school.DoesNotExist:
