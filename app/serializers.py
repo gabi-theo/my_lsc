@@ -76,25 +76,34 @@ class SignInSerializer(serializers.ModelSerializer):
         return data
 
     def get_schools(self, obj):
+        resp_list = []
+        schools = []
+        # role: admin (work in progress?)
+        '''
+        {
+            "schools": [],
+            "role": null,
+            "user_id": "48037275-5764-4707-9488-81cb0e5d4e48",
+            "student_ids": null,
+            "trainer_id": null
+        }
+        '''
+        
         if obj.role == "coordinator":
             schools = obj.user_school.all()
         elif obj.role == "student":
             parent = obj.parent_user
             try:
                 schools = parent.school.all()
-                for school in schools:
-                    resp_list.append({str(school.id): school.name})
-                return resp_list
             except Exception as e:
-                schools = parent.school
-                return [{str(schools.id): schools.name}]
+                schools = [parent.school]
         elif obj.role == "trainer":
             trainer = obj.trainer_user
             schools = TrainerFromSchool.objects.filter(trainer=trainer).schools.all()
 
-        resp_list = []
         for school in schools:
             resp_list.append({str(school.id): school.name})
+    
         return resp_list
     
     def get_role(self, obj):
