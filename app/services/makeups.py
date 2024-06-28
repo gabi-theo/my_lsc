@@ -8,6 +8,7 @@ from app.models import (
     Trainer,
 )
 from app.services.school import SchoolService
+from app.services.sessions import SessionService
 from app.services.trainers import TrainerService
 from app.utils import (
     get_date_of_day_in_same_week,
@@ -297,3 +298,16 @@ class MakeUpService:
                 "end": (datetime.combine(datetime.today(), session_time) + timedelta(minutes=120)).time(),
             }
         }
+
+    @staticmethod
+    def get_make_up_options(self, absence, school, make_up_type):
+        options = {
+            "courses": SessionService.get_next_sessions_for_absence(absence, school, make_up_type),
+            "make_ups": MakeUpService.get_make_ups_for_session(absence, school, type=make_up_type),
+            "30_mins": []
+        }
+        if make_up_type == "onl":
+            options["30_mins"] = MakeUpService.is_make_up_possible_online_before_or_after_class_for_absence(absence, school)
+        elif make_up_type == "sed":
+            options["30_mins"] = MakeUpService.is_make_up_possible_sed_before_or_after_class_for_absence(absence, school)
+        return options

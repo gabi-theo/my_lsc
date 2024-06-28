@@ -260,17 +260,7 @@ class MakeUpSessionsAvailableView(mixins.CreateModelMixin, generics.GenericAPIVi
             trainer = request.user.trainer_user
             return TrainerFromSchool.objects.filter(trainer=trainer).schools.first()
 
-    def get_make_up_options(self, absence, school, make_up_type):
-        options = {
-            "courses": SessionService.get_next_sessions_for_absence(absence, school, make_up_type),
-            "make_ups": MakeUpService.get_make_ups_for_session(absence, school, type=make_up_type),
-            "30_mins": []
-        }
-        if make_up_type == "onl":
-            options["30_mins"] = MakeUpService.is_make_up_possible_online_before_or_after_class_for_absence(absence, school)
-        elif make_up_type == "sed":
-            options["30_mins"] = MakeUpService.is_make_up_possible_sed_before_or_after_class_for_absence(absence, school)
-        return options
+    
 
     def get(self, request, *args, **kwargs):
         make_up_type = self.kwargs.get('make_up_type')  # onl, sed, any
@@ -336,7 +326,7 @@ class MakeUpSessionsAvailableView(mixins.CreateModelMixin, generics.GenericAPIVi
 =======
 
         if make_up_type in ["onl", "sed"]:
-            make_up_options[make_up_type] = self.get_make_up_options(absence, school, make_up_type)
+            make_up_options[make_up_type] = MakeUpService.get_make_up_options(absence, school, make_up_type)
 
 >>>>>>> 13f08ab (Refactored MakeUpSessionsAvView)
         return Response(make_up_options, status=status.HTTP_200_OK)
