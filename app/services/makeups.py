@@ -301,7 +301,7 @@ class MakeUpService:
         }
 
     @staticmethod
-    def get_make_up_options(self, absence, school, make_up_type):
+    def get_make_up_options(absence, school, make_up_type):
         options = {
             "courses": SessionService.get_next_sessions_for_absence(absence, school, make_up_type),
             "make_ups": MakeUpService.get_make_ups_for_session(absence, school, type=make_up_type),
@@ -314,7 +314,7 @@ class MakeUpService:
         return options
     
     @staticmethod
-    def get_school(self, request, absence, school_id):
+    def get_school(request, absence, school_id):
         if school_id:
             return School.objects.get(pk=school_id)
 
