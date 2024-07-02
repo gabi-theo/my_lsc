@@ -15,7 +15,6 @@ from app.utils import (
     create_serialized_response_from_object,
 )
 from my_lsc import settings
-from app.models import *
 
 
 class MakeUpService:
@@ -300,31 +299,4 @@ class MakeUpService:
             }
         }
 
-    @staticmethod
-    def get_make_up_options(absence, school, make_up_type):
-        options = {
-            "courses": SessionService.get_next_sessions_for_absence(absence, school, make_up_type),
-            "make_ups": MakeUpService.get_make_ups_for_session(absence, school, type=make_up_type),
-            "30_mins": []
-        }
-        if make_up_type == "onl":
-            options["30_mins"] = MakeUpService.is_make_up_possible_online_before_or_after_class_for_absence(absence, school)
-        elif make_up_type == "sed":
-            options["30_mins"] = MakeUpService.is_make_up_possible_sed_before_or_after_class_for_absence(absence, school)
-        return options
     
-    @staticmethod
-    def get_school(request, absence, school_id):
-        if school_id:
-            return School.objects.get(pk=school_id)
-
-        if request.user.is_anonymous:
-            return absence.absent_on_session.course_session.school
-
-        if request.user.role == "stud":
-            return request.user.parent_user.school.first()
-        elif request.user.role == "coordinator":
-            return request.user.user_school.first()
-        else:
-            trainer = request.user.trainer_user
-            return TrainerFromSchool.objects.filter(trainer=trainer).schools.first()

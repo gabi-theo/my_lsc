@@ -300,15 +300,21 @@ class MakeUpSessionsAvailableView(mixins.CreateModelMixin, generics.GenericAPIVi
         make_up_type = self.kwargs.get('make_up_type') # onl, sed, any
         absence_id = self.kwargs.get('absence_id')
         school_id = self.kwargs.get('school_id')
+        absence = AbsenceService.get_absence_by_id(absence_id)
         
-        try:
-            absence = AbsenceService.get_absence_by_id(absence_id)
-            school = MakeUpService.get_school(request, absence, school_id)
-        except absence.DoesNotExist:
-            return Response({'error': 'Absence not found'}, status=status.HTTP_404_NOT_FOUND)
-        except school.DoesNotExist:
-            return Response({'error': 'School not found'}, status=status.HTTP_404_NOT_FOUND)
-        
+        if not school_id:
+            if request.user.is_anonymous:
+                school = absence.absent_on_session.course_session.school
+            else:
+                if request.user.role == "stud":
+                    school = request.user.parent_user.school.first()
+                elif request.user.role == "coordinator":
+                    school = request.user.user_school.first()
+                else:
+                    trainer = request.user.trainer_user
+                    school = TrainerFromSchool.objects.filter(trainer=trainer).schools.first()
+        else:
+            school = School.objects.get(pk=school_id)
         make_up_options = {
             "onl": {
                 "courses": [],
@@ -321,10 +327,21 @@ class MakeUpSessionsAvailableView(mixins.CreateModelMixin, generics.GenericAPIVi
                 "30_mins": [],
             },
         }
-
-        if make_up_type in ["onl", "sed"]:
-            make_up_options[make_up_type] = MakeUpService.get_make_up_options(absence, school, make_up_type)
-
+        if make_up_type == "onl":
+            make_up_options["onl"]["make_ups"] = MakeUpService.get_make_ups_for_session(
+                absence, school, type=make_up_type)
+            make_up_options["onl"]["courses"] =  SessionService.get_next_sessions_for_absence(
+                absence, school, make_up_type)
+            make_up_options["onl"]["30_mins"] = \
+                MakeUpService.is_make_up_possible_online_before_or_after_class_for_absence(absence, school)
+            
+        elif make_up_type == "sed":
+            make_up_options["sed"]["make_ups"] = MakeUpService.get_make_ups_for_session(
+                absence, school, type=make_up_type)
+            make_up_options["sed"]["courses"] =  SessionService.get_next_sessions_for_absence(
+                absence, school, make_up_type)
+            make_up_options["sed"]["30_mins"] = \
+                MakeUpService.is_make_up_possible_sed_before_or_after_class_for_absence(absence, school)
         return Response(make_up_options, status=status.HTTP_200_OK)
 
     def create(self, request, *args, **kwargs):
@@ -504,15 +521,16 @@ class StudentCourseScheduleView(APIView):
 class StudentCoursesAndAbsentStatus(APIView):
     permission_classes = [AllowAny]
     def get(self, request, student_id):
+        # CourseService??
         student_courses = CourseSchedule.objects.filter(students__id=student_id)
         resp = []
         for course in student_courses:
             student_sessions_in_course = []
             for session in course.sessions.all():
                 absence = AbsenceService.get_absence_by_missed_session_id_and_student_id(session_id=session.id, student_id=student_id)
-                print(session.id)
-                print(student_id)
-                print(absence)
+                # print(session.id)
+                # print(student_id)
+                # print(absence)
                 presence_status = SessionPresence.objects.filter(student__id=student_id, session=session)
                 student_sessions_in_course.append({
                     "session_id": session.id,
