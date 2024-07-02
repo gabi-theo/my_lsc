@@ -1,3 +1,5 @@
+
+
 import uuid
 import random
 from time import sleep
@@ -56,14 +58,19 @@ def random_time(start_hour, end_hour):
 
 # Function to create fake data for the models
 def generate_fake_data():
+    print("GENERATING FAKE DATA.........")
     # Create a superuser for testing
+    print("__________")
+    print("CREATING SUPER USER")
     try:
         superuser = User.objects.create_superuser(username='admin', password='admin')
     except Exception as e:
         print(e)
-
+    print("DONE CREATING SUPER USER")
     # Create schools
     schools = []
+    print("__________")
+    print("CREATING SCHOOLS AND COORDINATORS")
     for _ in range(3):
         user = User.objects.create_user(role="coordinator", username=f"coordinator{_}", password=f"coordinator{_}")
         school = School.objects.create(
@@ -74,9 +81,11 @@ def generate_fake_data():
             smartbill_api_key=fake.uuid4()
         )
         schools.append(school)
-
+    print("DONE CREATING SCHOOLS")
+    print("__________")
     # Create rooms
     rooms = []
+    print("POPULATING ROOMS")
     for school in schools:
         for _ in range(5):
             room = Room.objects.create(
@@ -85,8 +94,10 @@ def generate_fake_data():
                 school=school
             )
             rooms.append(room)
-
+    print("DONE POPULATING ROOMS")
+    print("__________")
     # Create days off
+    print("CREATING DAYS OFF")
     for school in schools:
         for _ in range(5):
             DaysOff.objects.create(
@@ -95,12 +106,17 @@ def generate_fake_data():
                 day_off_info=fake.text(),
                 school=school
             )
-
+    print("DONE CREATING DAYS OFF")
+    print("__________")
+    print("CREATING COURSE DAYS")
     # Create course days
     for day in ['luni', 'marti', 'miercuri', 'joi', 'vineri', 'sambata', 'duminica']:
         CourseDays.objects.create(day=day)
-
+    print("DONE CREATING COURSE DAYS")
+    print("__________")
     # Create courses
+    print("CREATING COURSES")
+
     courses = []
     for _ in range(5):
         course = Course.objects.create(
@@ -108,8 +124,12 @@ def generate_fake_data():
         )
         courses.append(course)
 
+    print("DONE CREATING COURSES")
+    print("__________")
+
     # Create trainers
     trainers = []
+    print("CREATING TRAINERS")
     for _ in range(20):
         trainer = Trainer.objects.create(
             user=User.objects.create_user(
@@ -123,7 +143,11 @@ def generate_fake_data():
         )
         trainers.append(trainer)
 
+    print(f"Total trainers created: {len(trainers)}")
+    print("DONE CREATING TRAINERS")
+    print("__________")
     # Create trainers from school
+    print("ADDING TRAINERS TO SCHOOLS AND CREATING DEFAULT TRAINER SCHEDULE (default each day from 09:00 to 21:00)")
     for school in schools:
         for trainer in random.sample(trainers, random.randint(4, 7)):
             TrainerFromSchool.objects.create(school=school, trainer=trainer)
@@ -132,7 +156,6 @@ def generate_fake_data():
             start_date = datetime(2024, 1, 1)
             end_date = datetime(2024, 6, 30)
             dates = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
-
             for date in dates:
                 TrainerSchedule.objects.create(
                     year=2024,
@@ -145,10 +168,12 @@ def generate_fake_data():
                     online_only=fake.boolean(),
                     school=school,
                 )
-
+    print("DONE ADDING TRAINERS TO SCHOOLS")
+    print("__________")
     # Create parents
+    print("CREATING PARENTS AND USERS FOR PARENTS")
     parents = []
-    for i in range(random.randint(100,150)):
+    for i in range(random.randint(50,100)):
         username = fake.user_name()
         password = fake.password()
         exists = True
@@ -177,7 +202,10 @@ def generate_fake_data():
             active_account=fake.boolean()
         )
         parents.append(parent)
-
+    print(f"Total parents created: {len(parents)}")
+    print("DONE CREATING PARENTS")
+    print("__________")
+    print("CREATING STUDENTS AND ASSIGNING BETWEEN 1 AND 3 KIDS TO PARENTS")
     # Create students
     students = []
     for parent in parents:
@@ -188,8 +216,12 @@ def generate_fake_data():
                 last_name=fake.last_name(),
             )
             students.append(student)
-
+    print(f"Total students created: {len(students)}")
+    print("DONE CREATING STUDENTS")
+    print("__________")
     # Create course schedules
+    print("CREATING GROUPS/COURSESCHEDULES, ASSIGING STUDENTS TO EACH COURSE")
+    course_schedules = []
     for school in schools:
         trainers_from_school = TrainerFromSchool.objects.filter(school=school).order_by("?").first()
         for course in courses:
@@ -216,11 +248,16 @@ def generate_fake_data():
                     available_places_for_make_up_online=random.randint(1, 5),
                     available_places_for_make_up_on_site=random.randint(1, 5),
                 )
-                for student in random.sample(students, random.randint(4, 12)):
-                    StudentCourseSchedule.objects.create(student=student, course_schedule=course_schedule)
-
+                course_schedules.append(course_schedule)
+    for student in students:
+        courses1 = random.sample(course_schedules, random.randint(1, 2))
+        for course in courses1:
+            StudentCourseSchedule.objects.create(student=student, course_schedule=course)
+    print("DONE CREATING GROUPS/COURSESCHEDULES")
+    print("__________")
 
     # Create session presences
+    print("CREATING RANDOM PRESENCE STATUS FOR EACH SESSION AND EACH STUDENT")
     absent_students = []
     for session in Session.objects.all():
         for student in session.course_session.students.all():
@@ -229,43 +266,66 @@ def generate_fake_data():
                 absent_students.append((student, session, status))
             SessionPresence.objects.create(student=student, session=session, status=status)
     print(f"Total absent students: {len(absent_students)}")
+    print("DONE CREATING PRESENCE")
+    print("__________")
 
     # Create make-ups
-    for session_presence in SessionPresence.objects.filter(status='absent'):
-        mu_type = random.choice(['onl', 'hbr', 'sed'])
-        makeup = MakeUp.objects.create(
-            date_time=random_date(datetime(2024,1,15, 14, 0), datetime(2024,6,30, 20, 0)),
-            online_link=fake.url(),
-            type=mu_type,
-            duration_in_minutes=30,
-            trainer=random.choice(trainers),
-            make_up_approved=fake.boolean(),
-            make_up_completed=fake.boolean(),
-            classroom=random.choice(rooms) if mu_type in ["hbr", "sed"] else None,
-            can_be_used_as_online_make_up_for_other_schools=fake.boolean(),
-            available_places_for_make_up_online=random.randint(1, 5),
-            available_places_for_make_up_on_site=random.randint(1, 5),
-            session=session_presence.session,
-        )
-
+    print("CREATE ABSENT STUDENTS AND ASSIGN TO MAKEUPS. NOT ALL ABSENT STUDENTS WILL HAVE A MAKEUP")
     # Create absent students
     for student in absent_students:
         absent_course_schedule = student[1].course_session
+        should_create_make_up = random.randint(0, 1)
+        makeup = None
+        if should_create_make_up and student[2] == "absent":
+            mu_type = random.choice(['onl', 'hbr', 'sed'])
+            makeup = MakeUp.objects.create(
+                date_time=random_date(datetime(2024,1,15, 14, 0), datetime(2024,6,30, 20, 0)),
+                online_link=fake.url(),
+                type=mu_type,
+                duration_in_minutes=30,
+                trainer=random.choice(trainers),
+                make_up_approved=fake.boolean(),
+                make_up_completed=False,
+                classroom=random.choice(rooms) if mu_type in ["hbr", "sed"] else None,
+                can_be_used_as_online_make_up_for_other_schools=fake.boolean(),
+                available_places_for_make_up_online=random.randint(1, 5),
+                available_places_for_make_up_on_site=random.randint(1, 5),
+                session=student[1],
+            )
+        elif student[2] == "made_up":
+            mu_type = random.choice(['onl', 'hbr', 'sed'])
+
+            makeup = MakeUp.objects.create(
+                date_time=random_date(datetime(2024,3,1, 14, 0), datetime(2024,7,30, 20, 0)),
+                online_link=fake.url(),
+                type=mu_type,
+                duration_in_minutes=30,
+                trainer=random.choice(trainers),
+                make_up_approved=fake.boolean(),
+                make_up_completed=True,
+                classroom=random.choice(rooms) if mu_type in ["hbr", "sed"] else None,
+                can_be_used_as_online_make_up_for_other_schools=fake.boolean(),
+                available_places_for_make_up_online=random.randint(1, 5),
+                available_places_for_make_up_on_site=random.randint(1, 5),
+                session=student[1],
+            )
         AbsentStudent.objects.create(
             absent_participant=student[0],
             absent_on_session=student[1],
             is_absence_in_crm=fake.boolean(),
             is_absence_communicated_to_parent=fake.boolean(),
-            is_absence_completed=fake.boolean(),
+            is_absence_completed=True if student[2] == "made_up" else False,
             is_absent_for_absence=fake.boolean(),
-            has_make_up_scheduled=fake.boolean(),
+            has_make_up_scheduled=True if makeup else False,
             choosed_course_session_for_absence=student[1],
             choosed_make_up_session_for_absence=MakeUp.objects.filter(session=student[1]).first(),
             is_make_up_online=fake.boolean(),
             is_make_up_on_site=fake.boolean(),
             comment=fake.text(),
         )
-
+    print("DONE CREATING ABSENT STUDENTS AND MAKEUPS")
+    print("__________")
+    print("GENERATING THE REST OF THE FAKE DATA")
 
     # Create course descriptions
     for course in courses:
@@ -333,9 +393,10 @@ def generate_fake_data():
             invoice_status=random.choice(['platita', 'emisa', 'depasita', 'anulata']),
             invoice_date_time=fake.date_time_between(start_date=student_invoice.course_schedule.first_day_of_session, end_date=student_invoice.course_schedule.last_day_of_session),
         )
-
+    print("DONE GENERATING FAKE DATA")
 
 def erase_and_create_fake_data():
+    print("REMOVING ALL EXISTING DATA!!!")
     # Delete existing data
     SessionPresence.objects.all().delete()
     AbsentStudent.objects.all().delete()
@@ -360,6 +421,7 @@ def erase_and_create_fake_data():
     School.objects.all().delete()
     DaysOff.objects.all().delete()
     CourseDays.objects.all().delete()
+    print("DONE REMOVING ALL DATA")
     generate_fake_data()
 
 erase_and_create_fake_data()
