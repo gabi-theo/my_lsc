@@ -22,7 +22,7 @@ class SessionService:
             session_trainer=trainer,
             date=date
         )
-
+    
     @staticmethod
     def get_presence_by_course_and_student(course_schedule, student):
         return SessionPresence.objects.filter(student=student, session__course_session=course_schedule)
@@ -109,3 +109,14 @@ class SessionService:
                     available_sessions.append(
                         create_serialized_response_from_object(object=session, fields=fields_to_include_for_serializer))
         return available_sessions
+
+    @staticmethod
+    def get_sessions_by_trainer_and_date_in_range(trainer, start_date, end_date):
+        return Session.objects.filter(
+            session_trainer=trainer,
+            date__range=[start_date, end_date]
+        )
+    
+    @staticmethod
+    def get_sessions_by_student_and_date_in_range(student, start_date, end_date):
+        return Session.objects.filter(date__range=[start_date, end_date], session_presences__student=student)

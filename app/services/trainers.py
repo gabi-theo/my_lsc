@@ -279,3 +279,5 @@ class TrainerService:
     @staticmethod
     def get_trainer_by_id(trainer_id):
         return Trainer.objects.filter(pk=trainer_id).first()
+    def get_trainer_by_user(user):
+        return Trainer.objects.get(user=user)
