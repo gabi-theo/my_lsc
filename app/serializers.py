@@ -99,7 +99,10 @@ class SignInSerializer(serializers.ModelSerializer):
                 schools = [parent.school]
         elif obj.role == "trainer":
             trainer = obj.trainer_user
-            schools = TrainerFromSchool.objects.filter(trainer=trainer).schools.all()
+            schools = TrainerFromSchool.objects.filter(trainer=trainer)
+            schools = [school.school for school in schools]
+        elif obj.role == "admin":
+            schools = obj.user_school.all()
 
         for school in schools:
             resp_list.append({str(school.id): school.name})
@@ -387,6 +390,11 @@ class SessionListSerializer(serializers.ModelSerializer):
     def get_session_trainer(self, obj):
         return obj.session_trainer.__str__()
 
+
+class SessionForCalendarSerializer(SessionSerializer):
+    class Meta:
+        model = Session
+        fields = ['id', 'course_session_id', 'course_session', 'session_passed', 'date', 'session_no']
 
 class SessionPresenceSerializer(serializers.ModelSerializer):
     session = SessionListSerializer(read_only=True)

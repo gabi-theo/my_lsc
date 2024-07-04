@@ -89,3 +89,11 @@ class StudentService:
                 day=unidecode(row['schedule_times'].split(" ")[0]),
                 time=row['schedule_times'].split(" ")[1],
             )
+    
+    @staticmethod
+    def get_parent_by_user(user):
+        return Parent.objects.get(user=user)
+    
+    @staticmethod
+    def get_student_by_parent(parent):
+        return Student.objects.filter(parent=parent).first()
