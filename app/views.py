@@ -649,7 +649,7 @@ class SchoolCalendarView(APIView):
 
     def get(self, request, *args, **kwargs):
         school_id = kwargs.get("school_id")
-        student_id = kwargs.get("student_id", None)
+        student_id = kwargs.get("student_id")
         
         if not settings.DEBUG: 
             start_date = datetime.today().date()
