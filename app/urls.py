@@ -65,9 +65,10 @@ urlpatterns = [
     path("make_up_presence/<uuid:absence_id>/<str:presence_type>/", StudentMakeUpAbsentView.as_view()),
     path("send_group_email", SendEmailToGroupsView.as_view()),
     path("sessions/", SessionsListView.as_view()),
-    #### calendar endpoint
-    path('school_calendar/', SchoolCalendarView.as_view()),
-    
+
+    ################################ CALENDAR ENDPOINTS
+    path("school_calendar/<uuid:school_id>/<uuid:student_id>/", SchoolCalendarView.as_view()),
+    path("school_calendar/<uuid:school_id>/", SchoolCalendarView.as_view()),
 
     ################################ TRAINERS ENDPOINTS
     path("trainers_from_school/", TrainerFromSchoolListView.as_view()),

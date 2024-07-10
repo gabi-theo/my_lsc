@@ -2,7 +2,7 @@ from datetime import datetime
 from rest_framework import status
 from rest_framework.response import Response
 
-from app.models import Session, SessionPresence, Trainer
+from app.models import CourseSchedule, Session, SessionPresence, Trainer
 from app.utils import create_serialized_response_from_object
 from my_lsc import settings
 
@@ -118,5 +118,36 @@ class SessionService:
         )
     
     @staticmethod
-    def get_sessions_by_student_and_date_in_range(student, start_date, end_date):
-        return Session.objects.filter(date__range=[start_date, end_date], session_presences__student=student)
+    def get_sessions_by_trainer_school_and_date_in_range(trainer_id, school_id, start_date, end_date):
+        """
+        fetch sessions for a trainer in a specific school within a date range
+        """
+        return Session.objects.filter(
+            session_trainer_id=trainer_id,
+            course_session__school_id=school_id,
+            date__range=[start_date, end_date]
+        )
+    
+    @staticmethod
+    def get_course_schedules_by_student(student_id, school_id):
+        return CourseSchedule.objects.filter(school__id=school_id, students__id=student_id)
+    
+    @staticmethod
+    def get_course_schedules_by_school(school_id):
+        return CourseSchedule.objects.filter(school__id=school_id)
+
+    @staticmethod
+    def get_sessions_by_student_and_date_in_range(student_id, school_id, start_date, end_date):
+        course_schedules = SessionService.get_course_schedules_by_student(student_id, school_id)
+        return Session.objects.filter(
+            date__range=[start_date, end_date],
+            course_session__in=course_schedules
+        )
+    
+    @staticmethod
+    def get_sessions_by_school_and_date_in_range(school_id, start_date, end_date):
+        course_schedules = SessionService.get_course_schedules_by_school(school_id)
+        return Session.objects.filter(
+            date__range=[start_date, end_date],
+            course_session__in=course_schedules
+        )

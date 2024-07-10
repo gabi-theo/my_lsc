@@ -1,6 +1,7 @@
 import pandas as pd
 from django.db.models import Q
 from unidecode import unidecode
+from django.shortcuts import get_object_or_404
 
 from app.models import (
     Parent,
@@ -91,9 +92,31 @@ class StudentService:
             )
     
     @staticmethod
-    def get_parent_by_user(user):
-        return Parent.objects.get(user=user)
+    def get_parent_by_user_or_404(user):
+        try:
+            return Parent.objects.get(user=user)
+        except Parent.DoesNotExist:
+            return Response({'detail': 'Parent not found'}, status=status.HTTP_404_NOT_FOUND)
     
     @staticmethod
-    def get_student_by_parent(parent):
+    def get_student_by_parent_and_school(parent, school_id, student_id):
         return Student.objects.filter(parent=parent).first()
+
+
+    @staticmethod
+    def get_student_by_parent1(student_id):
+        try:
+            return Student.objects.filter(pk=student_id)
+        except Student.DoesNotExist:
+            return Response({'detail': 'Student not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+    
+    @staticmethod
+    def get_parent_by_user(user):
+        
+        return get_object_or_404(Parent, user=user)
+    
+    @staticmethod
+    def get_students_by_parent(parent):
+       
+        return Student.objects.filter(parent=parent)
