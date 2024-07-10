@@ -1,4 +1,6 @@
 from datetime import timedelta
+from rest_framework.response import Response
+from rest_framework import generics, status, mixins
 from django.shortcuts import get_object_or_404
 from app.models import Session
 from app.services.sessions import SessionService
@@ -15,7 +17,6 @@ class CalendarService:
         if user.role == 'trainer':
             trainer = TrainerService.get_trainer_by_user(user)
             sessions = SessionService.get_sessions_by_trainer_school_and_date_in_range(trainer.id, school_id, start_date, end_date)
-            # sessions = SessionService.get_sessions_by_trainer_and_date_in_range(trainer, start_date, end_date)
         elif user.role in ['coordinator', 'admin']:
             if student_id:
                 sessions = SessionService.get_sessions_by_student_and_date_in_range(student_id, school_id, start_date, end_date)
