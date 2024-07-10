@@ -1,6 +1,7 @@
 import json
 from django.db.models import Min, Max
 from django_filters.rest_framework import DjangoFilterBackend
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, mixins
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -38,6 +39,7 @@ from app.serializers import (
     TrainerScheduleSerializer,
     SessionForCalendarSerializer,
 )
+from app.services.calendar import CalendarService
 from app.services.absences import AbsenceService
 from app.services.courses import CourseService
 from app.services.makeups import MakeUpService
@@ -639,71 +641,25 @@ class NewsView(generics.ListAPIView):
     serializer_class = NewsSerializer
 
     def get_queryset(self):
-        print(self.request.user)
-        print(self.request.user.user_school.all().first())
         return NewsService.get_news_by_school(self.request.user.user_school.all().first())
 
-
 ################################################# SCHOOL CALENDAR
-
 class SchoolCalendarView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        # start_date = datetime.today().date()
-        start_date = datetime(2024, 4, 10)
+        school_id = kwargs.get("school_id")
+        student_id = kwargs.get("student_id", None)
+        
+        if not settings.DEBUG: 
+            start_date = datetime.today().date()
+        else:
+            start_date = datetime(2024, 4, 10)
+        
         end_date = start_date + timedelta(days=30)
         user = request.user
 
-        if user.role == 'student':
-            parent = StudentService.get_parent_by_user(user)
-            student = StudentService.get_student_by_parent(parent)
-            sessions = SessionService.get_sessions_by_student_and_date_in_range(student, start_date, end_date)
-        elif user.role == 'trainer':
-            trainer = TrainerService.get_trainer_by_user(user)
-            sessions = SessionService.get_sessions_by_trainer_and_date_in_range(trainer, start_date, end_date)
-        elif user.role in ['coordinator', 'admin']:
-            sessions = SessionService.get_sessions_by_user_school(user).filter(date__range=[start_date, end_date])
-        else:
-            # role admin not set 
-            sessions = Session.objects.none()
+        calendar_data = CalendarService.generate_calendar(user, school_id, student_id, start_date, end_date)
 
-        sessions_by_date = {}
-        for session in sessions:
-            date_str = session.date.strftime('%d-%m-%Y')
-            if date_str not in sessions_by_date:
-                sessions_by_date[date_str] = []
-            sessions_by_date[date_str].append(session)
-
-        # fetch days off
-        days_off = SchoolService.get_days_off_in_range(start_date, end_date)
-        days_off_dates = set()
-        for day_off in days_off:
-            for single_date in (day_off.first_day_off + timedelta(n) for n in range((day_off.last_day_off - day_off.first_day_off).days + 1)):
-                days_off_dates.add(single_date.strftime('%d-%m-%Y'))
-
-        calendar = {}
-        for single_date in (start_date + timedelta(n) for n in range(30)):
-            date_str = single_date.strftime('%d-%m-%Y')
-            if date_str in days_off_dates:
-                calendar[date_str] = {
-                    "courses": {},
-                    "status": "vacation"
-                }
-            else:
-                if date_str in sessions_by_date:
-                    sessions_data = SessionForCalendarSerializer(sessions_by_date[date_str], many=True).data
-                    status = "my_course" if user.role in ['student', 'trainer'] else "course"
-                    calendar[date_str] = {
-                        "courses": sessions_data,
-                        "status": status
-                    }
-                else:
-                    calendar[date_str] = {
-                        "courses": {},
-                        "status": "no_courses"
-                    }
-
-        return Response(calendar)
+        return Response(calendar_data)
     
-
