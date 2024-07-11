@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from app.models import TrainerFromSchool, TrainerSchedule, User, Session, MakeUp
+from app.models import Trainer, TrainerFromSchool, TrainerSchedule, User, Session, MakeUp
 from app.utils import random_password_generator, find_available_times
 from core.tasks import send_trainer_registration_email
 
@@ -113,3 +113,7 @@ class TrainerService:
             school=school,
             date=date,
         )
+    
+    @staticmethod
+    def get_trainer_by_user(user):
+        return Trainer.objects.get(user=user)

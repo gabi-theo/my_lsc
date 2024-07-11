@@ -131,11 +131,9 @@ def generate_fake_data():
     trainers = []
     print("CREATING TRAINERS")
     for _ in range(20):
+        user = User.objects.create_user(role="trainer", username=f"trainer{_}", password=f"trainer{_}")
         trainer = Trainer.objects.create(
-            user=User.objects.create_user(
-                username=fake.user_name(),
-                password=fake.password(),
-            ),
+            user=user,
             first_name=fake.first_name(),
             last_name=fake.last_name(),
             phone_contact=fake.phone_number(),

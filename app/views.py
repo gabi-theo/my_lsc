@@ -1,6 +1,7 @@
 import json
 from django.db.models import Min, Max
 from django_filters.rest_framework import DjangoFilterBackend
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, status, mixins
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -15,8 +16,9 @@ from my_lsc import settings
 
 from app.authentication import CookieJWTAuthentication
 from app.filters import AbsenceFilter
-from app.models import CourseSchedule, DailySchoolSchedule, Room, School, SessionPresence, TrainerFromSchool, TrainerSchedule
+from app.models import Session, CourseSchedule, DailySchoolSchedule, Room, School, SessionPresence, TrainerFromSchool, TrainerSchedule
 from app.permissions import IsCoordinator, IsTrainer
+
 from app.serializers import (
     AbsencesSerializer,
     CourseScheduleSerializer,
@@ -35,7 +37,9 @@ from app.serializers import (
     TrainerCreateUpdateSerializer,
     TrainerFromSchoolSerializer,
     TrainerScheduleSerializer,
+    SessionForCalendarSerializer,
 )
+from app.services.calendar import CalendarService
 from app.services.absences import AbsenceService
 from app.services.courses import CourseService
 from app.services.makeups import MakeUpService
@@ -618,6 +622,25 @@ class NewsView(generics.ListAPIView):
     serializer_class = NewsSerializer
 
     def get_queryset(self):
-        print(self.request.user)
-        print(self.request.user.user_school.all().first())
         return NewsService.get_news_by_school(self.request.user.user_school.all().first())
+
+################################################# SCHOOL CALENDAR
+class SchoolCalendarView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        school_id = kwargs.get("school_id")
+        student_id = kwargs.get("student_id")
+        
+        if not settings.DEBUG: 
+            start_date = datetime.today().date()
+        else:
+            start_date = datetime(2024, 4, 10)
+        
+        end_date = start_date + timedelta(days=30)
+        user = request.user
+
+        calendar_data = CalendarService.generate_calendar(user, school_id, student_id, start_date, end_date)
+
+        return Response(calendar_data)
+    

@@ -1,6 +1,7 @@
 import pandas as pd
 from django.db.models import Q
 from unidecode import unidecode
+from django.shortcuts import get_object_or_404
 
 from app.models import (
     Parent,
@@ -89,3 +90,13 @@ class StudentService:
                 day=unidecode(row['schedule_times'].split(" ")[0]),
                 time=row['schedule_times'].split(" ")[1],
             )
+    
+    @staticmethod
+    def get_parent_by_user(user):
+        
+        return get_object_or_404(Parent, user=user)
+    
+    @staticmethod
+    def get_students_by_parent(parent):
+       
+        return Student.objects.filter(parent=parent)

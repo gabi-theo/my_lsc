@@ -99,3 +99,4 @@ class CourseService:
             print(
                 f"Error for group_name{group_name} on day {day} and time {time}: {e}")
             pass
+

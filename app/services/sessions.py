@@ -2,7 +2,7 @@ from datetime import datetime
 from rest_framework import status
 from rest_framework.response import Response
 
-from app.models import Session, SessionPresence, Trainer
+from app.models import CourseSchedule, Session, SessionPresence, Trainer
 from app.utils import create_serialized_response_from_object
 from my_lsc import settings
 
@@ -22,7 +22,7 @@ class SessionService:
             session_trainer=trainer,
             date=date
         )
-
+    
     @staticmethod
     def get_presence_by_course_and_student(course_schedule, student):
         return SessionPresence.objects.filter(student=student, session__course_session=course_schedule)
@@ -109,3 +109,45 @@ class SessionService:
                     available_sessions.append(
                         create_serialized_response_from_object(object=session, fields=fields_to_include_for_serializer))
         return available_sessions
+
+    @staticmethod
+    def get_sessions_by_trainer_and_date_in_range(trainer, start_date, end_date):
+        return Session.objects.filter(
+            session_trainer=trainer,
+            date__range=[start_date, end_date]
+        )
+    
+    @staticmethod
+    def get_sessions_by_trainer_school_and_date_in_range(trainer_id, school_id, start_date, end_date):
+        """
+        fetch sessions for a trainer in a specific school within a date range
+        """
+        return Session.objects.filter(
+            session_trainer_id=trainer_id,
+            course_session__school_id=school_id,
+            date__range=[start_date, end_date]
+        )
+    
+    @staticmethod
+    def get_course_schedules_by_student(student_id, school_id):
+        return CourseSchedule.objects.filter(school__id=school_id, students__id=student_id)
+    
+    @staticmethod
+    def get_course_schedules_by_school(school_id):
+        return CourseSchedule.objects.filter(school__id=school_id)
+
+    @staticmethod
+    def get_sessions_by_student_and_date_in_range(student_id, school_id, start_date, end_date):
+        course_schedules = SessionService.get_course_schedules_by_student(student_id, school_id)
+        return Session.objects.filter(
+            date__range=[start_date, end_date],
+            course_session__in=course_schedules
+        )
+    
+    @staticmethod
+    def get_sessions_by_school_and_date_in_range(school_id, start_date, end_date):
+        course_schedules = SessionService.get_course_schedules_by_school(school_id)
+        return Session.objects.filter(
+            date__range=[start_date, end_date],
+            course_session__in=course_schedules
+        )
