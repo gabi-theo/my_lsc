@@ -1,7 +1,20 @@
 from datetime import datetime, timedelta
 
-from app.models import TrainerFromSchool, TrainerSchedule, User, Session, MakeUp
-from app.utils import random_password_generator, find_available_times
+from app.models import (
+    TrainerFromSchool,
+    TrainerSchedule,
+    User,
+    Session,
+    MakeUp,
+    Trainer,
+)
+
+from app.utils import (
+    random_password_generator,
+    find_available_times,
+    interval_duration_gte,
+)
+
 from core.tasks import send_trainer_registration_email
 
 
@@ -113,3 +126,156 @@ class TrainerService:
             school=school,
             date=date,
         )
+    
+    @staticmethod
+    def get_trainer_intervals(
+        school,
+        date,
+        school_schedules,
+        ) -> dict[str, dict[str, dict | str]]:
+        """
+        
+        Returns the intervals for trainers which match the schedule of the school, for a given date.
+        Free intervals can be optionally filtered.
+
+        The format is
+
+        {
+            "<trainer_id>-<trainer_first_name>-<trainer_last_name>":
+
+            {
+                "busy":
+
+                {
+                    "start": <interval_start> (datetime.time),
+                    "end": <interval_end> (datetime.time),
+                    "type": <schedule_type> (string), <See `DailySchooSchedule.blocked_by`>
+                }
+
+                "free":
+
+                {
+                    "start": <interval_start> (datetime.time),
+                    "end": <interval_end> (datetime.time)
+                }
+
+                "schedule": "<start_time> - <end_time>" (string)
+            }
+        }
+        
+        :param school: The school for which to get trainer intervals
+
+        :param date: The date for which to get trainer intervals
+        """
+
+        result = {}
+
+        trainer_schedules = TrainerService.get_trainers_available_intervals_by_date_in_school(school=school, date=date)
+
+        last_schedule_type = None
+
+        for trainer_schedule in trainer_schedules:
+
+            intervals = {"busy": [], "free": [], "schedule":None}
+            trainer_start = trainer_schedule.available_hour_from
+            trainer_end = trainer_schedule.available_hour_to
+            school_schedule = list(school_schedules.filter(trainer_involved=trainer_schedule.trainer).order_by('busy_from'))
+            last_interval_end_busy = None
+            intervals["schedule"] = f"{trainer_start} - {trainer_end}"
+
+            for schedule_idx, schedule in enumerate(school_schedule):
+
+                schedule_start = schedule.busy_from
+                schedule_end = schedule.busy_to
+                schedule_type = schedule.blocked_by
+
+                if schedule_start == trainer_start:
+                    # This is a busy interval with the course starting right at the start of the trainer's schedule
+                    intervals["busy"].append({"start": schedule_start, "end": schedule_end, "type": schedule_type})
+
+                elif schedule_idx == 0:
+                    # This is the free interval between the start of the trainer's schedule and the start of the first course
+
+                    if interval_duration_gte(trainer_start, schedule_start, timedelta(minutes=30)):
+                        # Interval is at least 30m, can potentially be used for a make up
+                        interval_start = trainer_start
+                        interval_end = schedule_start
+                        
+                        if schedule_type == "course":
+                            # If the current activty is a course, leave the 30m slot before it open
+                            # for the usual course-related make up
+                            interval_end = (datetime.combine(datetime.today(), interval_end) - timedelta(minutes=30)).time()
+
+                        if interval_duration_gte(interval_start, interval_end, timedelta(minutes=30)):
+                            # If, after accounting for the usual time slot(s),
+                            # there is still enough time for a make-up, add this interval as free
+                            intervals["free"].append({"start": interval_start, "end": interval_end})
+
+                    intervals["busy"].append({"start": schedule_start, "end": schedule_end, "type": schedule_type})
+                elif last_interval_end_busy == schedule_start:
+                    # no break, intervals one after the other, extend busy interval
+                    intervals["busy"][-1]["end"] = schedule_end
+                elif last_interval_end_busy != schedule_start:
+                    # This is a free interval between two courses
+
+                    if interval_duration_gte(last_interval_end_busy, schedule_start, timedelta(minutes=30)):
+                        # Interval is at least 30m, can potentially be used for a make up
+
+                        interval_start = last_interval_end_busy
+                        interval_end = schedule_start
+
+                        prev_schedule_type = None
+
+                        if schedule_idx > 0:
+                            prev_schedule_type = school_schedule[schedule_idx - 1].blocked_by
+
+                        if prev_schedule_type == "course":
+                            # If the previous activty was a course, leave the 30m slot after it open
+                            # for the usual course-related make up
+                            interval_start = (datetime.combine(datetime.today(), interval_start) + timedelta(minutes=30)).time()
+
+                        if schedule_type == "course":
+                            # If the current activty is a course, leave the 30m slot before it open
+                            # for the usual course-related make up
+                            interval_end = (datetime.combine(datetime.today(), interval_end) - timedelta(minutes=30)).time()
+
+                        if interval_duration_gte(interval_start, interval_end, timedelta(minutes=30)):
+                            # If, after accounting for the usual time slot(s),
+                            # there is still enough time for a make-up, add this interval as free
+                            intervals["free"].append({"start": interval_start, "end": interval_end})
+
+                    intervals["busy"].append({"start": schedule_start, "end": schedule_end, "type": schedule_type})
+
+                last_interval_end_busy = schedule_end
+                last_schedule_type = schedule_type
+
+            if not last_interval_end_busy:
+                last_interval_end_busy = trainer_start
+            if last_interval_end_busy != trainer_end:
+                if interval_duration_gte(last_interval_end_busy, trainer_end, timedelta(minutes=30)):
+                        # Interval is at least 30m, can potentially be used for a make up
+                        interval_start = last_interval_end_busy
+                        interval_end = trainer_end
+                        
+                        if last_schedule_type == "course":
+                            # If the last activty is a course, leave the 30m slot after it open
+                            # for the usual course-related make up
+                            interval_start = (datetime.combine(datetime.today(), interval_start) + timedelta(minutes=30)).time()
+
+                        if interval_duration_gte(interval_start, interval_end, timedelta(minutes=30)):
+                            # If, after accounting for the usual time slot(s),
+                            # there is still enough time for a make-up, add this interval as free
+                            intervals["free"].append({"start": interval_start, "end": interval_end})
+
+            result[f"{trainer_schedule.trainer.id}-{trainer_schedule.trainer.first_name}-{trainer_schedule.trainer.last_name}"] = intervals
+
+        return result
+    
+
+    @staticmethod
+    def get_trainer_by_username(username: str):
+        return Trainer.objects.filter(user__username=username).first()
+
+    @staticmethod
+    def get_trainer_by_id(trainer_id):
+        return Trainer.objects.filter(pk=trainer_id).first()

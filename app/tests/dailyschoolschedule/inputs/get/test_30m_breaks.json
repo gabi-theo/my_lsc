@@ -1,0 +1,95 @@
+{
+    "users": [
+        {
+            "username": "test_user_1",
+            "password": "test_password_1"
+        }
+    ],
+    "schools": [
+        {
+            "name": "test_school_1",
+            "phone_contact": "123456789",
+            "email_contact": "test_school_1@test.com",
+            "user_username": "test_user_1"
+        }
+    ],
+    "rooms": [
+        {
+            "name": "test_room_1",
+            "capacity": 30,
+            "school_name": "test_school_1"
+        }
+    ],
+    "course_days": [
+        "luni"
+    ],
+    "school_schedules": [
+        {
+            "school_name": "test_school_1",
+            "working_day": "luni",
+            "start_hour": "08:00:00",
+            "end_hour": "17:00:00"
+        }
+    ],
+    "trainers": [
+        {
+            "first_name": "test",
+            "last_name": "trainer_1",
+            "phone_contact": "123456789",
+            "email_contact": "test_trainer_1@test.com",
+            "user_username": "test_user_1"
+        }
+    ],
+    "trainer_schedules": {
+        "0": {
+            "trainer_idx": 0,
+            "date": "2024-02-01",
+            "available_day": "luni",
+            "available_hour_from": "08:30:00",
+            "available_hour_to": "16:30:00",
+            "school_name": "test_school_1"
+        }
+    },
+    "daily_school_schedules": [
+        {
+            "date": "2024-02-01",
+            "busy_from": "09:00:00",
+            "busy_to": "10:30:00",
+            "blocked_by": "course",
+            "room_name": "test_room_1",
+            "trainer_involved_idx": 0,
+            "school_schedule_idx": 0
+        },
+        {
+            "date": "2024-02-01",
+            "busy_from": "11:00:00",
+            "busy_to": "12:30:00",
+            "blocked_by": "course",
+            "room_name": "test_room_1",
+            "trainer_involved_idx": 0,
+            "school_schedule_idx": 0
+        },
+        {
+            "date": "2024-02-01",
+            "busy_from": "13:00:00",
+            "busy_to": "14:30:00",
+            "blocked_by": "course",
+            "room_name": "test_room_1",
+            "trainer_involved_idx": 0,
+            "school_schedule_idx": 0
+        },
+        {
+            "date": "2024-02-01",
+            "busy_from": "15:00:00",
+            "busy_to": "16:30:00",
+            "blocked_by": "course",
+            "room_name": "test_room_1",
+            "trainer_involved_idx": 0,
+            "school_schedule_idx": 0
+        }
+            
+    ],
+    "courses": [
+        "Unity"
+    ]
+}

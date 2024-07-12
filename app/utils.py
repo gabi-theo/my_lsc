@@ -148,3 +148,11 @@ def find_busy_intervals(intervals, rooms_number, gap=timedelta(minutes=30)):
                 busy_intervals.append((busy_start, busy_end))
 
     return busy_intervals
+
+
+def interval_duration_gte(interval_start: time, interval_end: time, gap: timedelta) -> bool:
+    return (datetime.combine(datetime.today(), interval_end) - datetime.combine(datetime.today(), interval_start) >= gap)
+
+
+def intervals_intersect(start1, end1, start2, end2):
+    return start1 <= end2 and start2 <= end1

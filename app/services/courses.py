@@ -1,3 +1,8 @@
+from datetime import (
+    datetime,
+    timedelta
+)
+
 import pandas as pd
 from unidecode import unidecode
 
@@ -5,8 +10,8 @@ from app.models import (
     Course,
     CourseSchedule,
 )
-from app.utils import map_to_bool
 
+from app.utils import map_to_bool
 
 
 class CourseService:
@@ -32,7 +37,8 @@ class CourseService:
             course_schedule_pks)
         students_list = []
         for course_schedule in course_schedules:
-            students_for_schedule = course_schedule.students.filter(student_active=True)
+            students_for_schedule = course_schedule.students.filter(
+                student_active=True)
             students_list.extend(students_for_schedule)
         return students_list
 
@@ -41,7 +47,6 @@ class CourseService:
         all_students = cls.get_active_students_from_course_schedule_by_course_schedule_pks(
             course_schedule_pks)
         return list(set([stud.parent_email for stud in all_students]))
-
 
     @staticmethod
     def create_course_and_course_schedule_from_excel_by_school(
@@ -83,7 +88,7 @@ class CourseService:
         )
         course_schedule.students.add(student)
         return course_schedule
-    
+
     @staticmethod
     def get_course_schedule_by_group_name_day_and_time(
         group_name,
@@ -99,3 +104,7 @@ class CourseService:
             print(
                 f"Error for group_name{group_name} on day {day} and time {time}: {e}")
             pass
+
+    @staticmethod
+    def get_course_by_id(course_id):
+        return Course.objects.get(pk=course_id)
