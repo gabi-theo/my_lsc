@@ -105,6 +105,15 @@ class CourseService:
                 f"Error for group_name{group_name} on day {day} and time {time}: {e}")
             pass
 
+<<<<<<< HEAD
     @staticmethod
     def get_course_by_id(course_id):
         return Course.objects.get(pk=course_id)
+=======
+<<<<<<< HEAD
+=======
+    @staticmethod
+    def get_course_by_id(course_id):
+        return Course.objects.get(pk=course_id)
+>>>>>>> f56d7cc (Finished(?) dailyschoolschedule endpoint)
+>>>>>>> 08c1860 (Finished(?) dailyschoolschedule endpoint)
