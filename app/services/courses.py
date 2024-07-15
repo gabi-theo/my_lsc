@@ -106,6 +106,7 @@ class CourseService:
             pass
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     @staticmethod
     def get_course_by_id(course_id):
         return Course.objects.get(pk=course_id)
@@ -117,3 +118,8 @@ class CourseService:
         return Course.objects.get(pk=course_id)
 >>>>>>> f56d7cc (Finished(?) dailyschoolschedule endpoint)
 >>>>>>> 08c1860 (Finished(?) dailyschoolschedule endpoint)
+=======
+    @staticmethod
+    def get_course_by_id(course_id):
+        return Course.objects.get(pk=course_id)
+>>>>>>> afdd4ee (Added ports to settings.py)
