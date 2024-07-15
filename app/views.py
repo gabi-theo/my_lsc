@@ -17,7 +17,7 @@ from my_lsc import settings
 from app.authentication import CookieJWTAuthentication
 from app.filters import AbsenceFilter
 from app.models import Session, CourseSchedule, DailySchoolSchedule, Room, School, SessionPresence, TrainerFromSchool, TrainerSchedule
-from app.permissions import IsCoordinator, IsTrainer
+from app.permissions import IsCoordinator, IsTrainer, IsStudent
 
 from app.serializers import (
     AbsencesSerializer,
@@ -620,8 +620,19 @@ class UploadStudentsExcelView(APIView):
 ################################ NEWS VIEW
 class NewsView(generics.ListAPIView):
     serializer_class = NewsSerializer
-    
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            self.permission_classes = [IsAuthenticated, IsCoordinator]
+        elif self.request.method == 'DELETE':
+            self.permission_classes = [IsAuthenticated, IsCoordinator]
+        elif self.request.method == 'GET':
+            self.permission_classes = [IsAuthenticated, IsCoordinator | IsTrainer | IsStudent]
+        return super(NewsView, self).get_permissions()
+
     def post(self, request, *args, **kwargs):
+        
         serializer = NewsSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
