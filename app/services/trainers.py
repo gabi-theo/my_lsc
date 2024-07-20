@@ -283,4 +283,3 @@ class TrainerService:
     @staticmethod
     def get_trainer_by_user(user):
         return Trainer.objects.get(user=user)
-
