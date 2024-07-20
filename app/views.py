@@ -17,6 +17,7 @@ from my_lsc import settings
 from app.authentication import CookieJWTAuthentication
 from app.filters import AbsenceFilter
 from app.models import Session, CourseSchedule, DailySchoolSchedule, Room, School, SessionPresence, TrainerFromSchool, TrainerSchedule
+
 from app.permissions import IsCoordinator, IsTrainer, IsStudent
 
 from app.serializers import (
@@ -49,10 +50,9 @@ from app.services.sessions import SessionService
 from app.services.students import StudentService
 from app.services.trainers import TrainerService
 from app.services.users import UserService
-from app.utils import (
-    check_excel_format_in_request_data,
-    find_busy_intervals,
-)
+from app.services.dailyschoolschedule import DailySchoolScheduleService
+
+from app.utils import check_excel_format_in_request_data
 
 ########################################## AUTH VIEW
 class SignInView(generics.GenericAPIView):
@@ -148,8 +148,6 @@ class SchoolCreateView(generics.CreateAPIView):
         serializer.save(user=self.request.user)
 
 
-
-
 ####################################################### COURSES AND SESSIONS VIEWS
 class CourseScheduleDetailView(generics.ListAPIView, generics.GenericAPIView):
     serializer_class = CourseScheduleSerializer
@@ -163,75 +161,26 @@ class CourseScheduleDetailView(generics.ListAPIView, generics.GenericAPIView):
 
 class DailySchoolScheduleAPIView(APIView):
     def get(self, request, format=None, *args, **kwargs):
-        response = {"sed": {}, "onl": {}}
-        rooms = Room.objects.filter(school=self.request.user.user_school.first()).values_list('room_name', flat=True,)
-        room_count = rooms.count()
-        school_id = self.kwargs.get('school_id')
-        school = School.objects.get(pk=school_id)
-        for activity_type in ("sed", "onl"):
-            date = datetime(2024,2,1)
-            # date = datetime(year=2024, month=3, day=1)
-            for _ in range(0,30):
-                # Filter DailySchoolSchedule for the given date and weekday
-                response[activity_type][str(date.date())] = {}
- 
-            # for schedule in schedules:
-            #     for trainer in trainers:
-            #         if trainer.date == schedule.date:
-            #             print(trainer.date)
-                trainers = TrainerSchedule.objects.filter(school=school, date=date)
-                schedules = DailySchoolSchedule.objects.filter(
-                    school_schedule__school=school,
-                    date=date,
-                ).order_by('activity_type', 'busy_from')
-                for trainer in trainers:
-                    intervals = response[activity_type][str(date.date())][f"{trainer.trainer.id}-{trainer.trainer.first_name}-{trainer.trainer.last_name}"] = {"busy": [], "free": [], "schedule":None}
-                    trainer_start = trainer.available_hour_from
-                    trainer_end = trainer.available_hour_to
-                    trainer_schedules = schedules.filter(trainer_involved=trainer.trainer).order_by('busy_from')
-                    last_interval_end_busy = None
-                    intervals["schedule"] = f"{trainer_start} - {trainer_end}"
-                    for schedule in trainer_schedules:
-                        if schedule.busy_from == trainer_start:
-                            # this is a busy interval
-                            intervals["busy"].append({"start": schedule.busy_from, "end": schedule.busy_to, "type": schedule.blocked_by})
-                        elif schedule.busy_from != trainer_start and len(intervals["free"]) == 0 and len(intervals["busy"]) == 0:
-                            intervals["free"].append({"start": trainer_start, "end": schedule.busy_from})
-                            intervals["busy"].append({"start": schedule.busy_from, "end": schedule.busy_to, "type": schedule.blocked_by})
-                        elif last_interval_end_busy == schedule.busy_from:
-                            # no break, intervals one after the other, extend busy interval
-                            intervals["busy"][-1] = {"start": intervals["busy"][-1]["start"], "end": schedule.busy_to, "type": schedule.blocked_by}
-                        elif last_interval_end_busy != schedule.busy_from:
-                            intervals["free"].append({"start": last_interval_end_busy, "end": schedule.busy_from})
-                            intervals["busy"].append({"start": schedule.busy_from, "end": schedule.busy_to, "type": schedule.blocked_by})
-                        last_interval_end_busy = schedule.busy_to
-                    if not last_interval_end_busy:
-                        last_interval_end_busy = trainer_start
-                    if last_interval_end_busy != trainer_end:
-                        intervals["free"].append({"start": last_interval_end_busy, "end": trainer_end})
-                date = date + timedelta(days=1)
 
-                # elimineate free intervals shorter than 30 minutes
-                for interval_type in ("sed", "onl"):
-                    for date_intervals in response[interval_type]:
-                        for trainer_intervals in response[interval_type][date_intervals]:
-                            trainer_interval = response[interval_type][date_intervals][trainer_intervals]
-                            filtered_intervals = [interval for interval in trainer_interval["free"] if (datetime.combine(datetime.today(), interval["end"]) - datetime.combine(datetime.today(), interval["start"]) >= timedelta(minutes=30))]
-                            trainer_interval["free"] = filtered_intervals
-                
-                # eliminate intervals that cannot happen due to busy rooms
-                # TODO: test this functionality as fake data don't provide enough data for this to be tested
-                for interval_type in ("sed", "onl"):
-                    if interval_type == "sed":
-                        for date_intervals in response[interval_type]:
-                            for trainer_intervals in response[interval_type][date_intervals]:
-                                trainer_interval = response[interval_type][date_intervals][trainer_intervals]
-                                for interval in trainer_interval["free"]:
-                                    interval_schedules = schedules.filter(busy_from__gte=interval["start"], busy_to__lte=interval["end"], activity_type="sed").order_by('busy_from')
-                                    rooms_intervals = list(interval_schedules.values_list("room", "busy_from", "busy_to"))
-                                    busy_intervals = find_busy_intervals(rooms_intervals, room_count)
-                                    if busy_intervals:
-                                        print(busy_intervals)
+        school_id = self.kwargs.get('school_id')
+
+        response = DailySchoolScheduleService.get_suitable_make_up_intervals(
+            school_id=school_id)
+
+        return Response(response)
+
+    def post(self, request, format=None, *args, **kwargs):
+
+        print(request.data)
+
+        absence_id = request.data.get("absence_id")
+
+        start_date = datetime.strptime(request.data.get("start_date"), "%Y-%m-%d").date()
+
+        start_time = datetime.strptime(request.data.get("start_time"), "%H:%M:%S").time()
+
+        response = DailySchoolScheduleService.assign_make_up(absence_id=absence_id, start_date=start_date, start_time=start_time)
+
         return Response(response)
 
 
@@ -246,17 +195,17 @@ class CourseScheduleUpdate(generics.UpdateAPIView):
 
         if data.get('classroom') == '---':
             del data['classroom']
-        
+
         if data.get('default_trainer') == '---':
             del data['default_trainer']
 
         serializer = self.get_serializer(instance, data=data, partial=True)
-        
+
         if serializer.is_valid():
             serializer.save()
             SessionService.update_default_trainer_for_course_session(
-                course_session_id = self.kwargs["pk"],
-                trainer_id = request.data["default_trainer"],
+                course_session_id=self.kwargs["pk"],
+                trainer_id=request.data["default_trainer"],
             )
             return Response({"message": "Course schedule successfuly updated"})
 
@@ -279,14 +228,16 @@ class MakeUpChooseView(generics.GenericAPIView):
         make_up = None
         absence = AbsenceService.get_absence_by_id(self.kwargs['absence_id'])
         if self.kwargs.get("session_option") and self.kwargs.get("session_option") != "None":
-            session = SessionService.get_session_by_id(self.kwargs.get("session_option")).first()
+            session = SessionService.get_session_by_id(
+                self.kwargs.get("session_option")).first()
             absence.choosed_course_session_for_absence = session
         elif self.kwargs.get("make_up_option") and self.kwargs.get("make_up_option") != "None":
             if self.kwargs.get("make_up_option") == "before" or self.kwargs.get("make_up_option") == "after":
                 make_up = MakeUpService.create_make_up_before_or_after_session_for_absence(
                     absence, self.kwargs.get("make_up_opton"))
             else:
-                make_up = MakeUpService.get_make_up_by_id(self.kwargs.get("make_up_option")) 
+                make_up = MakeUpService.get_make_up_by_id(
+                    self.kwargs.get("make_up_option"))
             absence.choosed_make_up_session_for_absence = make_up
         absence.has_make_up_scheduled = True
         absence.is_absent_for_absence = None
@@ -436,14 +387,13 @@ class UploadCourseExcelView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-
-
-######################################################## TRAINERS VIEWS
+# TRAINERS VIEWS
 class TrainersAvailabilityView(generics.GenericAPIView):
     permission_classes = [AllowAny]
 
     def get(self, request, *args, **kwargs):
-        school = self.kwargs.get("school") if self.kwargs.get("school") else self.request.user.user_school.all().first()
+        school = self.kwargs.get("school") if self.kwargs.get(
+            "school") else self.request.user.user_school.all().first()
         trainers_availability = TrainerService.get_trainers_from_school_availability_by_date(
             school,
             self.kwargs.get("date"),
@@ -476,14 +426,15 @@ class TrainerScheduleIntervalListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         school = self.request.user.user_school.all().first()
-        queryset = TrainerService.get_trainer_from_school(school, self.kwargs["pk"])
+        queryset = TrainerService.get_trainer_from_school(
+            school, self.kwargs["pk"])
         return queryset
 
     def perform_create(self, serializer):
         serializer.save(school=self.request.user.user_school.all().first())
 
 
-######################################################### STUDENTS VIEWS
+# STUDENTS VIEWS
 class AbsentStudentsView(generics.ListAPIView):
     serializer_class = AbsencesSerializer
     permission_classes = [IsAuthenticated, IsCoordinator or IsTrainer]
@@ -497,14 +448,17 @@ class AbsentStudentsView(generics.ListAPIView):
 
 class GetStudentByMailOrPhoneView(APIView):
     permission_classes = [AllowAny]
+
     def post(self, request, *arg, **kwargs):
         phone = kwargs["phone"]
         email = kwargs["email"]
-        students = StudentService.get_students_id_by_phone_or_email(phone, email)
+        students = StudentService.get_students_id_by_phone_or_email(
+            phone, email)
         if students.exists():
             students_response = []
             for student in students:
-                students_response.append({"student_id": student.id, "student_name": student.__str__()})
+                students_response.append(
+                    {"student_id": student.id, "student_name": student.__str__()})
             return Response({"students": students_response}, status=status.HTTP_200_OK)
         return Response({"error": "student_not_found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -514,7 +468,8 @@ class StudentCourseScheduleView(APIView):
 
     def get(self, request, student_id):
         try:
-            student_courses = CourseSchedule.objects.filter(students__id=student_id)
+            student_courses = CourseSchedule.objects.filter(
+                students__id=student_id)
             serializer = CourseScheduleSerializer(student_courses, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except CourseSchedule.DoesNotExist:
@@ -523,17 +478,21 @@ class StudentCourseScheduleView(APIView):
 
 class StudentCoursesAndAbsentStatus(APIView):
     permission_classes = [AllowAny]
+
     def get(self, request, student_id):
-        student_courses = CourseSchedule.objects.filter(students__id=student_id)
+        student_courses = CourseSchedule.objects.filter(
+            students__id=student_id)
         resp = []
         for course in student_courses:
             student_sessions_in_course = []
             for session in course.sessions.all():
-                absence = AbsenceService.get_absence_by_missed_session_id_and_student_id(session_id=session.id, student_id=student_id)
+                absence = AbsenceService.get_absence_by_missed_session_id_and_student_id(
+                    session_id=session.id, student_id=student_id)
                 print(session.id)
                 print(student_id)
                 print(absence)
-                presence_status = SessionPresence.objects.filter(student__id=student_id, session=session)
+                presence_status = SessionPresence.objects.filter(
+                    student__id=student_id, session=session)
                 student_sessions_in_course.append({
                     "session_id": session.id,
                     "session_date": session.date,
@@ -558,12 +517,14 @@ class StudentAbsentView(APIView):
 
     def post(self, request, *args, **kwargs):
         student = StudentService.get_student_by_id(kwargs['student_id'])
-        session = SessionService.get_session_by_id(kwargs["session_id"]).first()
+        session = SessionService.get_session_by_id(
+            kwargs["session_id"]).first()
         absence, created = AbsenceService.create_absent_student_for_session(
             student=student,
             session=session,)
         if created:
-            MakeUpService.create_empty_make_up_session_for_absence(student, absence)
+            MakeUpService.create_empty_make_up_session_for_absence(
+                student, absence)
         return Response({"Student marked successfully as absent"}, status=status.HTTP_200_OK)
 
     def get(self, request, *args, **kwargs):
@@ -575,7 +536,7 @@ class StudentAbsentView(APIView):
         else:
             absence = AbsenceService.get_absence_by_missed_session_id_and_student_id(
                 kwargs['session_id'],
-                kwargs['student_id'], 
+                kwargs['student_id'],
             )
             serializer = AbsencesSerializer(absence)
             return Response(serializer.data)
@@ -586,8 +547,10 @@ class StudentPresenceView(APIView):
 
     def get(self, request, *args, **kwargs):
         student = StudentService.get_student_by_id(kwargs["student_id"])
-        course_schedule = CourseService.get_course_schedule_by_pk(kwargs["course_schedule_id"])
-        session_presences = SessionService.get_presence_by_course_and_student(course_schedule, student)
+        course_schedule = CourseService.get_course_schedule_by_pk(
+            kwargs["course_schedule_id"])
+        session_presences = SessionService.get_presence_by_course_and_student(
+            course_schedule, student)
 
         serializer = SessionPresenceSerializer(session_presences, many=True)
 
@@ -669,6 +632,7 @@ class NewsView(generics.ListAPIView):
 
     def get_queryset(self):
         return NewsService.get_news_by_school(self.request.user.user_school.all().first())
+
 
 ################################################# SCHOOL CALENDAR VIEW
 class SchoolCalendarView(APIView):

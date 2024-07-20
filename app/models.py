@@ -140,6 +140,9 @@ class CourseDays(models.Model):
     )
     day = models.CharField(max_length=20, choices=DAYS)
 
+    def __str__(self):
+        return str(self.day)
+
 
 class Course(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -174,6 +177,7 @@ class TrainerFromSchool(models.Model):
 
     # def __str__(self) -> str:
     #     return f"{self.trainer.__str__()} - {self.school.name}"
+
 
 class Parent(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -305,6 +309,9 @@ class TrainerSchedule(models.Model):
     online_only = models.BooleanField(default=False)
     school = models.ForeignKey(School, on_delete=models.CASCADE, null=True, blank=True)
 
+    def __str__(self):
+        return f"{self.trainer.first_name} {self.trainer.last_name} available on {self.available_day}, {self.date} from {self.available_hour_from} to {self.available_hour_to}"
+
 
 class SchoolSchedule(models.Model):
     DAYS = (
@@ -324,12 +331,12 @@ class SchoolSchedule(models.Model):
 
 
 class DailySchoolSchedule(models.Model):
-    blocked_by = (
+    BLOCKED_BY = (
         ("course", "Curs"),
         ("make_up", "Make Up"),
         ("other", "Other")
     )
-    activity_type = (
+    ACTIVITY_TYPE = (
         ("online", "Online"),
         ("sed", "Sediu"),
     )
@@ -337,10 +344,13 @@ class DailySchoolSchedule(models.Model):
     date = models.DateField(null=False, blank=False)
     busy_from = models.TimeField(null=False, blank=False)
     busy_to = models.TimeField(null=False, blank=False)
-    blocked_by = models.CharField(choices=blocked_by, null=False, blank=False, max_length=20)
-    activity_type = models.CharField(activity_type, null=False, blank=False)
+    blocked_by = models.CharField(choices=BLOCKED_BY, null=False, blank=False, max_length=20)
+    activity_type = models.CharField(choices=ACTIVITY_TYPE, null=False, blank=False)
     room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True)
     trainer_involved = models.ForeignKey(Trainer, on_delete=models.SET_NULL, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.school_schedule.working_day}, {self.date}, ({self.busy_from} - {self.busy_to}): ({self.activity_type}, {self.room}, {self.blocked_by}, {self.trainer_involved})"
 
 
 class Session(models.Model):
