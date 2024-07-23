@@ -28,11 +28,11 @@ class Session(models.Model):
 
 class SessionPresence(models.Model):
     STATUS = (
-        ("present", "Present"),
-        ("absent", "Absent"),
-        ("made_up_complete", "Made Up Complete"),
-        ("made_up_setup", "Made Up Setup"),
-        ("made_up_absent", "Made Up Absent"),
+        ("Present", "Present"),
+        ("Absent", "Absent"),
+        ("Made Up Complete", "Made Up Complete"),
+        ("Made Up Setup", "Made Up Setup"),
+        ("Made Up Absent", "Made Up Absent"),
     )
     id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
     student = models.ForeignKey("app.Student", on_delete=models.SET_NULL,
