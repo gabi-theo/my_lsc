@@ -1,4 +1,4 @@
-from rest_framework.generics import GenericAPIView
+from rest_framework.generics import GenericAPIView, CreateAPIView
 from rest_framework.permissions import (
     AllowAny,
     IsAuthenticated,
@@ -17,6 +17,7 @@ from app.serializers import (
     SignInSerializer,
     ResetPasswordSerializer,
 )
+from app.serializers.register import RegisterSerializer
 from app.services.users import UserService
 
 from my_lsc.settings import AUTH_COOKIE_KEY
@@ -76,3 +77,6 @@ class ResetPasswordView(GenericAPIView):
         user.save()
 
         return response
+    
+class RegisterView(CreateAPIView):
+    serializer_class = RegisterSerializer

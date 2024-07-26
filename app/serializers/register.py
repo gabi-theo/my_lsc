@@ -3,6 +3,7 @@ from app.services.register import RegisterService
 from app.models import (
     User,
 )
+from app.services.users import UserService
 
 
 class RegisterSerializer(serializers.Serializer):
@@ -19,6 +20,9 @@ class RegisterSerializer(serializers.Serializer):
         
         if not parent:
             raise serializers.ValidationError("Parent not found with given phone number or email.")
+        
+        if parent.user:
+            raise serializers.ValidationError("Parent already has an user.")
         
         return attrs
 
