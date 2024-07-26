@@ -39,7 +39,6 @@ class RegisterSerializer(serializers.Serializer):
             raise serializers.ValidationError("Parent not found with given phone number and email")
         
         try:
-    
             user = User.objects.create_user(username=username, 
                                         password=password, 
                                         role = 'student')
