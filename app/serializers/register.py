@@ -3,14 +3,14 @@ from app.services.register import RegisterService
 from app.models import (
     User,
 )
-from app.services.users import UserService
+from django.db import IntegrityError
 
 
 class RegisterSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
     password = serializers.CharField(write_only=True)
-    phone_number = serializers.CharField(max_length=155)
-    email = serializers.EmailField()
+    phone_number = serializers.CharField(write_only=True, max_length=155)
+    email = serializers.EmailField(write_only=True)
 
     def validate(self, attrs):
         phone_number = attrs.get('phone_number')
@@ -38,9 +38,13 @@ class RegisterSerializer(serializers.Serializer):
         if not parent:
             raise serializers.ValidationError("Parent not found with given phone number and email")
         
-        user = User.objects.create_user(username=username, 
+        try:
+    
+            user = User.objects.create_user(username=username, 
                                         password=password, 
                                         role = 'student')
+        except IntegrityError as e:
+            raise serializers.ValidationError("User already exists!")
         
         parent.user = user
         parent.save()

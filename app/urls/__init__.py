@@ -8,6 +8,7 @@ from .sessions import urlpatterns as urlpatterns_sessions
 from .students import urlpatterns as urlpatterns_students
 from .trainers import urlpatterns as urlpatterns_trainers
 
+
 urlpatterns = []
 urlpatterns += urlpatterns_auth
 urlpatterns += urlpatterns_automated_messages
@@ -18,3 +19,4 @@ urlpatterns += urlpatterns_school
 urlpatterns += urlpatterns_sessions
 urlpatterns += urlpatterns_students
 urlpatterns += urlpatterns_trainers
+

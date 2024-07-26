@@ -6,3 +6,4 @@ from .school import *
 from .sessions import *
 from .students import *
 from .trainers import *
+from .register import *
