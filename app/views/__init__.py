@@ -3,6 +3,7 @@ from .automated_messages import *
 from .calendar import *
 from .courses import *
 from .excel import *
+from .feedback import *
 from .news import *
 from .school import *
 from .sessions import *
