@@ -12,7 +12,7 @@ from app.models import (
     Parent, Student, CourseSchedule, StudentCourseSchedule, TrainerSchedule,
     Session, SessionPresence, MakeUp, AbsentStudent, CourseDescription,
     SessionsDescription, SentWhatsappMessages, SentEmailsMessages,
-    StudentInvoice, Invoice
+    StudentInvoice, Invoice, News,
 )
 n = 0
 fake = Faker()
@@ -391,11 +391,31 @@ def generate_fake_data():
             invoice_status=random.choice(['platita', 'emisa', 'depasita', 'anulata']),
             invoice_date_time=fake.date_time_between(start_date=student_invoice.course_schedule.first_day_of_session, end_date=student_invoice.course_schedule.last_day_of_session),
         )
-    print("DONE GENERATING FAKE DATA")
+    
+    
+def create_fake_news_for_students():
+    schools = School.objects.all()
+    for school in schools:
+        students = Student.objects.filter(parent__school=school)
+        for student in students:
+            news = News.objects.create(
+                id=uuid.uuid4(),
+                title=fake.word(),
+                short_description=fake.sentence(),
+                text=fake.paragraph(),
+                created_at=fake.date_time_this_year(),
+                school=school,
+                news_for_group=None,
+                news_for_student=student
+            )
+            news.save()
+
+
 
 def erase_and_create_fake_data():
     print("REMOVING ALL EXISTING DATA!!!")
     # Delete existing data
+    
     SessionPresence.objects.all().delete()
     AbsentStudent.objects.all().delete()
     MakeUp.objects.all().delete()
@@ -419,7 +439,11 @@ def erase_and_create_fake_data():
     School.objects.all().delete()
     DaysOff.objects.all().delete()
     CourseDays.objects.all().delete()
+    News.objects.all().delete()
     print("DONE REMOVING ALL DATA")
     generate_fake_data()
+    print("DONE GENERATING FAKE DATA")
+    create_fake_news_for_students()
+    print("DONE CREATING FAKE NEWS")
 
 erase_and_create_fake_data()

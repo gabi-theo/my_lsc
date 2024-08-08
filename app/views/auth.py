@@ -81,6 +81,7 @@ class ResetPasswordView(GenericAPIView):
 class RegisterView(CreateAPIView):
     serializer_class = RegisterSerializer
     permission_classes = [AllowAny]
-    
+
     def get_queryset(self):
         return None
+    
