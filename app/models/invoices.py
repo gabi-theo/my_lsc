@@ -38,4 +38,4 @@ class Invoice(models.Model):
     student_invoice = models.ForeignKey("app.StudentInvoice", on_delete=models.CASCADE)
     invoice_no = models.CharField(max_length=50)
     invoice_status = models.CharField(max_length=20, choices=INVOICE_STATUS, null=True, blank=True)
-    invoice_date_time = models.DateTimeField(default=datetime.now())
+    invoice_date_time = models.DateTimeField(default=datetime(2024, 1, 1))
