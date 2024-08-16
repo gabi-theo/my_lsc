@@ -7,7 +7,8 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.status import HTTP_200_OK
 from rest_framework.views import APIView
-
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from app.authentication import CookieJWTAuthentication
 from app.permissions import (
     IsCoordinator,
@@ -19,9 +20,21 @@ from app.serializers import (
 )
 from app.serializers.register import RegisterSerializer
 from app.services.users import UserService
+from app.services.register import RegisterService
 
 from my_lsc.settings import AUTH_COOKIE_KEY
 
+from django.db import transaction
+from django.shortcuts import render, redirect
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_decode
+from django.utils.encoding import force_str
+from django.contrib.auth import get_user_model
+from django.http import HttpResponse
+from django.views import View
+from app.models.student import Parent
+
+User = get_user_model()
 
 class SignInView(GenericAPIView):
     authentication_classes = []
@@ -84,4 +97,24 @@ class RegisterView(CreateAPIView):
 
     def get_queryset(self):
         return None
-    
+        
+class ActivateAccountView(View):
+    def get(self, request, uidb64, token, parent_id, *args, **kwargs):
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+            parent_id = force_str(urlsafe_base64_decode(parent_id))
+            parent = Parent.objects.get(pk=parent_id)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            user = None
+            parent = None
+
+        if user is not None and parent is not None and default_token_generator.check_token(user, token):
+            with transaction.atomic():
+                user.is_active = True
+                user.save()
+                parent.user = user
+                parent.save()
+            return HttpResponse('Thank you for your email confirmation. Now you can log in to your account.')
+        else:
+            return HttpResponse('Activation link is invalid!')

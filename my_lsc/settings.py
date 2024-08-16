@@ -91,13 +91,25 @@ RESET_PASSWORD_LINK_TOKEN_KEY = "rplt"
 LONG_LIVE_SLIDING_TOKEN_LIFETIME_SEC = 30 * 24 * 60 * 60 * 2
 AUTH_COOKIE_KEY = "t"
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.office365.com'
-EMAIL_PORT = 587  # Port for the SMTP server
-EMAIL_USE_TLS = True  # Use TLS for secure communication
-EMAIL_HOST_USER = os.environ['EMAIL_USER']  # Shared email address
-EMAIL_HOST_PASSWORD = os.environ['EMAIL_APP_PASSWORD']
-EMAILS_QUEUE = "emails"
+SITE_URL = 'https://4ca8-5-14-1-29.ngrok-free.app'
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'django_ses.SESBackend'
+
+# AWS credentials
+AWS_ACCESS_KEY_ID = 'AKIAZAI4GUFGF4BGDWAT'
+AWS_SECRET_ACCESS_KEY = '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'
+
+AWS_SES_REGION_NAME = 'eu-north-1'
+AWS_SES_REGION_ENDPOINT = 'email.eu-north-1.amazonaws.com'
+
+DEFAULT_FROM_EMAIL = 'peliji5195@acpeak.com'
+
+# EMAIL_HOST = 'smtp.office365.com'
+# EMAIL_PORT = 587  # Port for the SMTP server
+# EMAIL_USE_TLS = True  # Use TLS for secure communication
+# EMAIL_HOST_USER = os.environ['EMAIL_USER']  # Shared email address
+# EMAIL_HOST_PASSWORD = os.environ['EMAIL_APP_PASSWORD']
+# EMAILS_QUEUE = "emails"
 SYSTEM_ALARMS_QUEUE = "system-alarms"
 
 CELERY_BROKER_URL = "redis://localhost:6379"

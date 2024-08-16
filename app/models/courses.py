@@ -46,6 +46,11 @@ class CourseDescription(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, editable=False)
     updated_at = models.DateTimeField(auto_now=True)
 
+class Semester(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    start_date = models.DateField(null=False, blank=False)
+    end_date = models.DateField(null=False, blank=False)
+    semester_name = models.CharField(max_length=100, null=False, blank=False)
 
 class CourseSchedule(models.Model):
     DAYS = (

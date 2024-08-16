@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from rest_framework_simplejwt.tokens import SlidingToken
+from rest_framework.permissions import AllowAny
 
 from app.utils import (
     set_token_to_header,
@@ -13,6 +14,14 @@ from .models import User
 
 class CookieJWTAuthentication(JWTAuthentication):
     def authenticate(self, request):
+
+        if request.resolver_match and hasattr(request.resolver_match.func, 'view_class'):
+            view_class = request.resolver_match.func.view_class
+            if hasattr(view_class, 'permission_classes'):
+                permissions = view_class.permission_classes
+                if AllowAny in permissions or any(issubclass(perm, AllowAny) for perm in permissions):
+                    return None
+                
         if (cookies := request.COOKIES) is None:
             return None
 

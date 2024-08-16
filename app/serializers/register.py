@@ -4,7 +4,12 @@ from app.models import (
     User,
 )
 from django.db import IntegrityError
-
+from django.core.mail import send_mail
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.urls import reverse
+from django.conf import settings
 
 class RegisterSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=150)
@@ -40,12 +45,22 @@ class RegisterSerializer(serializers.Serializer):
         
         try:
             user = User.objects.create_user(username=username, 
-                                        password=password, 
+                                        password=password,
+                                        is_active=False,
                                         role = 'student')
         except IntegrityError as e:
             raise serializers.ValidationError("User already exists!")
         
-        parent.user = user
-        parent.save()
+
+        # generate token and email verif
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        parent_id_encoded = urlsafe_base64_encode(force_bytes(parent.pk))
+        activation_link = reverse('activate', kwargs={'uidb64': uid, 'token': token, 'parent_id': parent_id_encoded})
+        activation_url = f"{settings.SITE_URL}{activation_link}"
+
+        mail_subject = 'Activate your account'
+        message = f"Hi {user.username},\n\nPlease click the link below to activate your account:\n\n{activation_url}\n\nThank you!"
+        send_mail(mail_subject, message, settings.DEFAULT_FROM_EMAIL, [email])
 
         return user

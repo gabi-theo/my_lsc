@@ -6,6 +6,7 @@ from app.views import (
     ResetPasswordView,
     SignInView,
     SignOutView,
+    ActivateAccountView,
 )
 
 urlpatterns = [
@@ -14,4 +15,5 @@ urlpatterns = [
     path("check_user/", CheckUserRedirectView.as_view()),
     path("auth/reset_password/",ResetPasswordView.as_view(),),
     path("auth/register/", RegisterView.as_view()),
+    path("activate/<uidb64>/<token>/<parent_id>/", ActivateAccountView.as_view(), name='activate'),
 ]
