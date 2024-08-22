@@ -6,7 +6,7 @@ from app.models import (Feedback, School, Student, User)
 class FeedbackSerializer(serializers.ModelSerializer):
 
     id = serializers.UUIDField(read_only=True)
-    role_of_submiter = serializers.CharField(read_only=True)
+    role_of_submiter = serializers.CharField()
 
     submission_date = serializers.DateField(read_only=True)
 
@@ -35,4 +35,5 @@ class FeedbackSerializer(serializers.ModelSerializer):
             "submited_by",
             "submited_for_student",
             "feedback_for_school",
+            "is_anonymised",
         ]
