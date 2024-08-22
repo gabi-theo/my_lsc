@@ -22,6 +22,7 @@ from .models import (
     Parent,
     DailySchoolSchedule,
     SchoolSchedule,
+    Feedback,
 )
 
 # Register your models here.
@@ -46,3 +47,4 @@ admin.site.register(AbsentStudent)
 admin.site.register(Room)
 admin.site.register(TrainerFromSchool)
 admin.site.register(Parent)
+admin.site.register(Feedback)
