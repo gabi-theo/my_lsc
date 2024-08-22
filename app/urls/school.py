@@ -16,6 +16,6 @@ urlpatterns = [
     path("news/", NewsView.as_view()),
     path("school_schedules/<uuid:school_id>/",
          DailySchoolScheduleAPIView.as_view()),
-    path("feedback/", FeedbackView.as_view()),
-    path("feedback/<uuid:feedback_id>/", FeedbackView.as_view()),
+    path("feedback/<uuid:school_id>/", FeedbackView.as_view()),
+    path("feedback/<uuid:school_id>/<uuid:feedback_id>/", FeedbackView.as_view()),
 ]
