@@ -1,5 +1,6 @@
 from .auth import *
 from .courses import *
+from .feedback import *
 from .news import *
 from .other import *
 from .school import *
